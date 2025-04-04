@@ -12,51 +12,59 @@ const MobileNavigation = ({ activeView, setActiveView }: MobileNavigationProps) 
       <div className="bg-neutral-100 dark:bg-neutral-800 rounded-full p-1.5 flex justify-between">
         <Button
           variant="ghost"
-          className={`flex flex-col items-center rounded-full flex-1 pt-2 pb-1 ${
+          className={`flex flex-col items-center rounded-full flex-1 py-1.5 ${
             activeView === "morning" 
               ? "bg-white dark:bg-neutral-700 shadow-sm text-primary-500 dark:text-primary-400" 
               : "text-neutral-500"
           }`}
           onClick={() => setActiveView("morning")}
         >
-          <Sunrise className="h-5 w-5" />
-          <span className="text-xs mt-0.5 font-medium">Morning</span>
+          <div className="flex flex-col items-center -space-y-0.5">
+            <Sunrise className="h-5 w-5" />
+            <span className="text-xs font-medium">Morning</span>
+          </div>
         </Button>
         <Button
           variant="ghost"
-          className={`flex flex-col items-center rounded-full flex-1 pt-2 pb-1 ${
+          className={`flex flex-col items-center rounded-full flex-1 py-1.5 ${
             activeView === "midday" 
               ? "bg-white dark:bg-neutral-700 shadow-sm text-primary-500 dark:text-primary-400" 
               : "text-neutral-500"
           }`}
           onClick={() => setActiveView("midday")}
         >
-          <Sun className="h-5 w-5" />
-          <span className="text-xs mt-0.5 font-medium">Midday</span>
+          <div className="flex flex-col items-center -space-y-0.5">
+            <Sun className="h-5 w-5" />
+            <span className="text-xs font-medium">Midday</span>
+          </div>
         </Button>
         <Button
           variant="ghost"
-          className={`flex flex-col items-center rounded-full flex-1 pt-2 pb-1 ${
+          className={`flex flex-col items-center rounded-full flex-1 py-1.5 ${
             activeView === "power" 
               ? "bg-white dark:bg-neutral-700 shadow-sm text-primary-500 dark:text-primary-400" 
               : "text-neutral-500"
           }`}
           onClick={() => setActiveView("power")}
         >
-          <Sunset className="h-5 w-5" />
-          <span className="text-xs mt-0.5 font-medium">Power</span>
+          <div className="flex flex-col items-center -space-y-0.5">
+            <Sunset className="h-5 w-5" />
+            <span className="text-xs font-medium">Power</span>
+          </div>
         </Button>
         <Button
           variant="ghost"
-          className={`flex flex-col items-center rounded-full flex-1 pt-2 pb-1 ${
+          className={`flex flex-col items-center rounded-full flex-1 py-1.5 ${
             activeView === "after" 
               ? "bg-white dark:bg-neutral-700 shadow-sm text-primary-500 dark:text-primary-400" 
               : "text-neutral-500"
           }`}
           onClick={() => setActiveView("after")}
         >
-          <Moon className="h-5 w-5" />
-          <span className="text-xs mt-0.5 font-medium">After</span>
+          <div className="flex flex-col items-center -space-y-0.5">
+            <Moon className="h-5 w-5" />
+            <span className="text-xs font-medium">After</span>
+          </div>
         </Button>
       </div>
     </div>
