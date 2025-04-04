@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { useUser } from "@/context/user-context";
@@ -216,7 +215,7 @@ const MarketStatus = ({ activeView }: MarketStatusProps) => {
             </div>
           </div>
         </div>
-        
+
         <p className="text-sm text-muted-foreground">
           Here's your personalized market intelligence brief for today
         </p>
