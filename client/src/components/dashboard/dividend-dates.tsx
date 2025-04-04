@@ -1,6 +1,7 @@
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { DividendEvent } from "@/lib/types";
 import { Button } from "@/components/ui/button";
+import { ChevronRight } from "lucide-react";
 
 interface DividendDatesProps {
   dividends: DividendEvent[];
@@ -9,16 +10,18 @@ interface DividendDatesProps {
 const DividendDates = ({ dividends }: DividendDatesProps) => {
   if (dividends.length === 0) {
     return (
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-md font-medium">Upcoming Dividend Dates</CardTitle>
-          <Button variant="link" size="sm">View All</Button>
-        </CardHeader>
-        <CardContent>
-          <div className="p-8 text-center">
-            <p className="text-sm text-neutral-500">No upcoming dividend dates found.</p>
+      <Card className="ios-card overflow-hidden mb-4">
+        <div className="p-4 pb-0">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="ios-header">Upcoming Dividend Dates</h2>
+            <Button variant="ghost" size="sm" className="text-primary-500 font-medium rounded-full -mr-2">
+              View All <ChevronRight className="h-3.5 w-3.5 ml-0.5" />
+            </Button>
           </div>
-        </CardContent>
+        </div>
+        <div className="p-8 text-center">
+          <p className="text-sm text-neutral-500">No upcoming dividend dates found.</p>
+        </div>
       </Card>
     );
   }
@@ -28,16 +31,20 @@ const DividendDates = ({ dividends }: DividendDatesProps) => {
   const paymentDividends = dividends.filter(d => d.paymentDate && new Date(d.paymentDate) >= new Date());
 
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 border-b">
-        <CardTitle className="text-md font-medium">Upcoming Dividend Dates</CardTitle>
-        <Button variant="link" size="sm">View All</Button>
-      </CardHeader>
-      <CardContent className="p-0">
+    <Card className="ios-card overflow-hidden mb-4">
+      <div className="p-4 pb-0">
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="ios-header">Upcoming Dividend Dates</h2>
+          <Button variant="ghost" size="sm" className="text-primary-500 font-medium rounded-full -mr-2">
+            View All <ChevronRight className="h-3.5 w-3.5 ml-0.5" />
+          </Button>
+        </div>
+      </div>
+      <div className="px-4 pb-4">
         <div className="divide-y divide-neutral-200 dark:divide-neutral-700">
           {/* Ex-Dividend Section */}
           {exDividends.length > 0 && (
-            <div className="p-4">
+            <div className="py-4">
               <h4 className="text-xs font-medium uppercase text-neutral-500 dark:text-neutral-400 mb-3">Ex-Dividend Date</h4>
               
               <div className="space-y-3">
@@ -52,7 +59,7 @@ const DividendDates = ({ dividends }: DividendDatesProps) => {
                     <div className="flex-1">
                       <div className="flex justify-between">
                         <div className="font-medium">{dividend.name}</div>
-                        <div className={`text-xs ${getCategoryTagClass(dividend.category)} rounded`}>
+                        <div className={`text-xs ${getCategoryTagClass(dividend.category)} rounded-full`}>
                           {getCategoryLabel(dividend.category)}
                         </div>
                       </div>
@@ -71,7 +78,7 @@ const DividendDates = ({ dividends }: DividendDatesProps) => {
           
           {/* Payment Date Section */}
           {paymentDividends.length > 0 && (
-            <div className="p-4">
+            <div className="py-4">
               <h4 className="text-xs font-medium uppercase text-neutral-500 dark:text-neutral-400 mb-3">Payment Date</h4>
               
               <div className="space-y-3">
@@ -86,7 +93,7 @@ const DividendDates = ({ dividends }: DividendDatesProps) => {
                     <div className="flex-1">
                       <div className="flex justify-between">
                         <div className="font-medium">{dividend.name}</div>
-                        <div className={`text-xs ${getCategoryTagClass(dividend.category)} rounded`}>
+                        <div className={`text-xs ${getCategoryTagClass(dividend.category)} rounded-full`}>
                           {getCategoryLabel(dividend.category)}
                         </div>
                       </div>
@@ -103,7 +110,7 @@ const DividendDates = ({ dividends }: DividendDatesProps) => {
             </div>
           )}
         </div>
-      </CardContent>
+      </div>
     </Card>
   );
 };
