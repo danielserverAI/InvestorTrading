@@ -200,9 +200,9 @@ const MarketStatus = ({ activeView }: MarketStatusProps) => {
       <div className="p-6 space-y-6">
         <div>
           <div className="flex items-start justify-between">
-            <div className="space-y-0.5">
-              <h1 className="text-3xl font-bold tracking-tight">{getViewTitle()}</h1>
-              <div className="text-sm text-muted-foreground">{today}</div>
+            <div className="space-y-1">
+              <h1 className="text-2xl font-semibold tracking-tight text-foreground">{getViewTitle()}</h1>
+              <div className="text-sm text-muted-foreground/80">{today}</div>
             </div>
             <div>
               <div className={`bg-destructive/10 text-destructive py-1 px-3 rounded-full inline-flex items-center text-sm font-medium ${getStatusColor()}`}>
