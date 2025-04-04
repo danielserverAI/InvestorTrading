@@ -140,6 +140,22 @@ const MarketStatus = ({ activeView }: MarketStatusProps) => {
       return "Good evening";
     }
   };
+  
+  // Get view title based on activeView
+  const getViewTitle = () => {
+    switch (activeView) {
+      case "morning":
+        return "Morning Brief";
+      case "midday":
+        return "Midday Pulse";
+      case "power":
+        return "Power Hour";
+      case "after":
+        return "After Hours";
+      default:
+        return "Daily Brief";
+    }
+  };
 
   // Determine status color
   const getStatusColor = () => {
@@ -180,14 +196,20 @@ const MarketStatus = ({ activeView }: MarketStatusProps) => {
             <h1 className="font-bold text-2xl md:text-3xl tracking-tight mb-1">
               {getGreeting()}{user ? `, ${user.username}` : ""}
             </h1>
-            <p className="text-neutral-500 dark:text-neutral-400">
-              {currentTime.toLocaleDateString(undefined, { 
-                weekday: 'long', 
-                month: 'long', 
-                day: 'numeric',
-                year: 'numeric'
-              })}
-            </p>
+            <div className="flex items-center gap-2">
+              <p className="text-neutral-500 dark:text-neutral-400">
+                {currentTime.toLocaleDateString(undefined, { 
+                  weekday: 'long', 
+                  month: 'long', 
+                  day: 'numeric',
+                  year: 'numeric'
+                })}
+              </p>
+              <span className="text-neutral-400 dark:text-neutral-600">•</span>
+              <p className="text-primary-600 dark:text-primary-400 font-medium">
+                {getViewTitle()}
+              </p>
+            </div>
           </div>
           
           <div className="flex items-center mt-3 md:mt-0">

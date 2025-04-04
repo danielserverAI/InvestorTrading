@@ -38,36 +38,6 @@ const Home = () => {
       <Header activeView={activeView} setActiveView={setActiveView} />
       
       <main className="flex-1 container mx-auto px-4 pb-16 md:pb-8 pt-4">
-        {/* Date & Market Status Bar */}
-        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-4">
-          <div>
-            <h2 className="text-lg font-medium">{views[activeView as keyof typeof views]}</h2>
-            <p className="text-sm text-neutral-500 dark:text-neutral-400">
-              {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
-            </p>
-          </div>
-          <div className="flex items-center space-x-4 mt-2 sm:mt-0">
-            <div className="flex items-center">
-              <span className="inline-block h-2 w-2 rounded-full bg-success-500 mr-2"></span>
-              <span className="text-sm">Markets Open in 32m</span>
-            </div>
-            <div className="flex items-center space-x-2">
-              <div className="flex flex-col items-end">
-                <span className="font-medium">S&P 500</span>
-                <span className="text-sm text-success-500">+0.42%</span>
-              </div>
-              <div className="flex flex-col items-end">
-                <span className="font-medium">NASDAQ</span>
-                <span className="text-sm text-success-500">+0.56%</span>
-              </div>
-              <div className="flex flex-col items-end">
-                <span className="font-medium">VIX</span>
-                <span className="text-sm text-danger-500">-3.17%</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
         <Dashboard activeView={activeView} />
       </main>
       
