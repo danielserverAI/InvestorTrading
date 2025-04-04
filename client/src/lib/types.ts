@@ -81,6 +81,15 @@ export interface MarketSentimentData {
   date: string;
 }
 
+// Market summary types
+export interface MarketSummaryData {
+  name: string;
+  symbol: string;
+  price: number;
+  change: number;
+  changePercent: number;
+}
+
 // Market data types
 export interface MarketData {
   news: News[];
@@ -89,4 +98,5 @@ export interface MarketData {
   tradeIdeas: TradeIdea[];
   dividends: DividendEvent[];
   marketSentiment: MarketSentimentData;
+  marketSummary: MarketSummaryData[];
 }

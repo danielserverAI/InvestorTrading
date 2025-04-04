@@ -6,9 +6,12 @@ import { z } from "zod";
 import { ZodError } from "zod";
 import { fromZodError } from "zod-validation-error";
 
+import { DEFAULT_SAMPLE_MARKET_DATA } from "../client/src/lib/constants";
+
 // Sample market data for different times of day
 const sampleMarketData = {
   morning: {
+    marketSummary: DEFAULT_SAMPLE_MARKET_DATA.marketSummary,
     news: [
       {
         id: 1,
@@ -212,6 +215,7 @@ const sampleMarketData = {
   },
   midday: {
     // Similar structure with midday-specific data
+    marketSummary: DEFAULT_SAMPLE_MARKET_DATA.marketSummary,
     news: [
       {
         id: 1,
@@ -261,6 +265,7 @@ const sampleMarketData = {
   },
   power: {
     // Data for power hour
+    marketSummary: DEFAULT_SAMPLE_MARKET_DATA.marketSummary,
     news: [],
     topMovers: [],
     upcomingEarnings: [],
@@ -276,6 +281,7 @@ const sampleMarketData = {
   },
   after: {
     // Data for after hours
+    marketSummary: DEFAULT_SAMPLE_MARKET_DATA.marketSummary,
     news: [],
     topMovers: [],
     upcomingEarnings: [],
