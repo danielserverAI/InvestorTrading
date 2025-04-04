@@ -41,6 +41,11 @@
   .ios-button {
     @apply rounded-full font-medium transition-all;
   }
+
+  /* Menu item styles */
+  .menu-item {
+    @apply flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors hover:bg-white/50 dark:hover:bg-neutral-800/50;
+  }
   
   /* Hide scrollbar */
   .no-scrollbar {

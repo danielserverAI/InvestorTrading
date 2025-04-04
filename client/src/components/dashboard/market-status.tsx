@@ -205,8 +205,8 @@ const MarketStatus = ({ activeView }: MarketStatusProps) => {
               <div className="text-sm text-muted-foreground/80">{today}</div>
             </div>
             <div>
-              <div className={`bg-destructive/10 text-destructive py-1 px-3 rounded-full inline-flex items-center text-sm font-medium ${getStatusColor()}`}>
-                <Clock className="w-3.5 h-3.5 mr-1.5 animate-pulse" /> 
+              <div className={`bg-white/50 dark:bg-neutral-800/50 py-1 px-3 rounded-full inline-flex items-center gap-1 text-sm font-medium ${getStatusColor()}`}>
+                <Clock className="w-3.5 h-3.5 animate-pulse" /> 
                 {formatMarketStatus()}
               </div>
               <div className="text-sm text-muted-foreground text-right mt-1">
