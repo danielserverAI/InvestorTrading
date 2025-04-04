@@ -1,6 +1,7 @@
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { EarningsEvent } from "@/lib/types";
 import { Button } from "@/components/ui/button";
+import { ChevronRight } from "lucide-react";
 
 interface UpcomingEarningsProps {
   earnings: EarningsEvent[];
@@ -9,16 +10,18 @@ interface UpcomingEarningsProps {
 const UpcomingEarnings = ({ earnings }: UpcomingEarningsProps) => {
   if (earnings.length === 0) {
     return (
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-md font-medium">Upcoming Earnings</CardTitle>
-          <Button variant="link" size="sm">Calendar View</Button>
-        </CardHeader>
-        <CardContent>
-          <div className="p-8 text-center">
-            <p className="text-sm text-neutral-500">No upcoming earnings scheduled.</p>
+      <Card className="ios-card overflow-hidden mb-4">
+        <div className="p-4 pb-0">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="ios-header">Upcoming Earnings</h2>
+            <Button variant="ghost" size="sm" className="text-primary-500 font-medium rounded-full -mr-2">
+              Calendar View <ChevronRight className="h-3.5 w-3.5 ml-0.5" />
+            </Button>
           </div>
-        </CardContent>
+        </div>
+        <div className="p-8 text-center">
+          <p className="text-sm text-neutral-500">No upcoming earnings scheduled.</p>
+        </div>
       </Card>
     );
   }
@@ -39,12 +42,16 @@ const UpcomingEarnings = ({ earnings }: UpcomingEarningsProps) => {
   });
 
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 border-b">
-        <CardTitle className="text-md font-medium">Upcoming Earnings</CardTitle>
-        <Button variant="link" size="sm">Calendar View</Button>
-      </CardHeader>
-      <CardContent className="p-4 space-y-4">
+    <Card className="ios-card overflow-hidden mb-4">
+      <div className="p-4 pb-0">
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="ios-header">Upcoming Earnings</h2>
+          <Button variant="ghost" size="sm" className="text-primary-500 font-medium rounded-full -mr-2">
+            Calendar View <ChevronRight className="h-3.5 w-3.5 ml-0.5" />
+          </Button>
+        </div>
+      </div>
+      <div className="px-4 pb-4 space-y-4">
         {/* This Week */}
         {thisWeekEarnings.length > 0 && (
           <div>
@@ -123,7 +130,7 @@ const UpcomingEarnings = ({ earnings }: UpcomingEarningsProps) => {
             <p className="text-sm text-neutral-500">No upcoming earnings events found.</p>
           </div>
         )}
-      </CardContent>
+      </div>
     </Card>
   );
 };

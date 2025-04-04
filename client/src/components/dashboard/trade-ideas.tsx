@@ -33,11 +33,37 @@ const TradeIdeas = ({ ideas }: TradeIdeasProps) => {
 
   if (ideas.length === 0) {
     return (
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-md font-medium">AI-Powered Trade Ideas</CardTitle>
+      <Card className="ios-card overflow-hidden mb-4">
+        <div className="p-4 pb-2">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="ios-header">AI-Powered Trade Ideas</h2>
+            <Select value={horizon} onValueChange={setHorizon}>
+              <SelectTrigger className="w-[180px] rounded-full text-sm">
+                <SelectValue placeholder="All Time Horizons" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Time Horizons</SelectItem>
+                <SelectItem value="intraday">Intraday</SelectItem>
+                <SelectItem value="swing">Swing Trade</SelectItem>
+                <SelectItem value="long-term">Long-Term</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+        <div className="p-8 text-center">
+          <p className="text-sm text-neutral-500">No trade ideas available right now.</p>
+        </div>
+      </Card>
+    );
+  }
+
+  return (
+    <Card className="ios-card overflow-hidden mb-4">
+      <div className="p-4 pb-2">
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="ios-header">AI-Powered Trade Ideas</h2>
           <Select value={horizon} onValueChange={setHorizon}>
-            <SelectTrigger className="w-[180px]">
+            <SelectTrigger className="w-[180px] rounded-full text-sm">
               <SelectValue placeholder="All Time Horizons" />
             </SelectTrigger>
             <SelectContent>
@@ -47,33 +73,9 @@ const TradeIdeas = ({ ideas }: TradeIdeasProps) => {
               <SelectItem value="long-term">Long-Term</SelectItem>
             </SelectContent>
           </Select>
-        </CardHeader>
-        <CardContent>
-          <div className="p-8 text-center">
-            <p className="text-sm text-neutral-500">No trade ideas available right now.</p>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 border-b">
-        <CardTitle className="text-md font-medium">AI-Powered Trade Ideas</CardTitle>
-        <Select value={horizon} onValueChange={setHorizon}>
-          <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="All Time Horizons" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Time Horizons</SelectItem>
-            <SelectItem value="intraday">Intraday</SelectItem>
-            <SelectItem value="swing">Swing Trade</SelectItem>
-            <SelectItem value="long-term">Long-Term</SelectItem>
-          </SelectContent>
-        </Select>
-      </CardHeader>
-      <CardContent className="p-0">
+        </div>
+      </div>
+      <div className="px-0">
         <div className="divide-y divide-neutral-200 dark:divide-neutral-700">
           {filteredIdeas.map((idea, index) => (
             <div key={index} className="p-4">
@@ -116,6 +118,7 @@ const TradeIdeas = ({ ideas }: TradeIdeasProps) => {
                     <Button 
                       size="sm" 
                       onClick={() => handleSaveIdea(idea)}
+                      className="rounded-full"
                     >
                       Save Idea
                     </Button>
@@ -123,17 +126,18 @@ const TradeIdeas = ({ ideas }: TradeIdeasProps) => {
                       size="sm" 
                       variant="outline" 
                       onClick={() => handleDismissIdea(idea)}
+                      className="rounded-full"
                     >
                       Dismiss
                     </Button>
                   </div>
-                  <Button variant="link" size="sm">View Details</Button>
+                  <Button variant="link" size="sm" className="text-primary-500">View Details</Button>
                 </div>
               </div>
             </div>
           ))}
         </div>
-      </CardContent>
+      </div>
     </Card>
   );
 };
