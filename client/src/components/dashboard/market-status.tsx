@@ -12,16 +12,16 @@ const MarketStatus = ({ activeView }: MarketStatusProps) => {
   const [currentTime, setCurrentTime] = useState(new Date());
   const [marketStatus, setMarketStatus] = useState<string>("");
   const [timeToEvent, setTimeToEvent] = useState<string>("");
-  
+
   // Update the clock every minute
   useEffect(() => {
     const timer = setInterval(() => {
       setCurrentTime(new Date());
     }, 60000);
-    
+
     return () => clearInterval(timer);
   }, []);
-  
+
   // Calculate market status and time remaining
   useEffect(() => {
     const calculateMarketStatus = () => {
@@ -29,109 +29,109 @@ const MarketStatus = ({ activeView }: MarketStatusProps) => {
       const hours = now.getHours();
       const minutes = now.getMinutes();
       const day = now.getDay();
-      
+
       // Weekend
       if (day === 0 || day === 6) {
         setMarketStatus("closed");
-        
+
         // Calculate time to market open on Monday
         const daysToMonday = day === 0 ? 1 : 2;
         const nextMarketOpen = new Date(now);
         nextMarketOpen.setDate(now.getDate() + daysToMonday);
         nextMarketOpen.setHours(9, 30, 0, 0);
-        
+
         const diffMs = nextMarketOpen.getTime() - now.getTime();
         const diffHrs = Math.floor(diffMs / (1000 * 60 * 60));
         const diffMins = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
-        
+
         setTimeToEvent(`${diffHrs}h ${diffMins}m until market opens`);
         return;
       }
-      
+
       // Pre-market (4:00 AM - 9:30 AM)
       if ((hours < 9) || (hours === 9 && minutes < 30)) {
         setMarketStatus("pre-market");
-        
+
         const marketOpen = new Date(now);
         marketOpen.setHours(9, 30, 0, 0);
-        
+
         const diffMs = marketOpen.getTime() - now.getTime();
         const diffHrs = Math.floor(diffMs / (1000 * 60 * 60));
         const diffMins = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
-        
+
         setTimeToEvent(`${diffHrs}h ${diffMins}m until market opens`);
         return;
       }
-      
+
       // Regular market hours (9:30 AM - 4:00 PM)
       if ((hours < 16) || (hours === 16 && minutes === 0)) {
         setMarketStatus("open");
-        
+
         // If approaching close (within 30 min)
         if ((hours === 15 && minutes >= 30) || hours === 16) {
           const marketClose = new Date(now);
           marketClose.setHours(16, 0, 0, 0);
-          
+
           const diffMs = marketClose.getTime() - now.getTime();
           const diffMins = Math.floor(diffMs / (1000 * 60));
-          
+
           setTimeToEvent(`${diffMins}m until market closes`);
         } else {
           const marketClose = new Date(now);
           marketClose.setHours(16, 0, 0, 0);
-          
+
           const diffMs = marketClose.getTime() - now.getTime();
           const diffHrs = Math.floor(diffMs / (1000 * 60 * 60));
           const diffMins = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
-          
+
           setTimeToEvent(`${diffHrs}h ${diffMins}m until market closes`);
         }
         return;
       }
-      
+
       // After-hours (4:00 PM - 8:00 PM)
       if (hours < 20) {
         setMarketStatus("after-hours");
-        
+
         const afterHoursClose = new Date(now);
         afterHoursClose.setHours(20, 0, 0, 0);
-        
+
         const diffMs = afterHoursClose.getTime() - now.getTime();
         const diffHrs = Math.floor(diffMs / (1000 * 60 * 60));
         const diffMins = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
-        
+
         setTimeToEvent(`${diffHrs}h ${diffMins}m until after-hours trading ends`);
         return;
       }
-      
+
       // Closed (8:00 PM - 4:00 AM)
       setMarketStatus("closed");
-      
+
       // Calculate time to next pre-market
       const tomorrow = new Date(now);
       tomorrow.setDate(now.getDate() + 1);
-      
+
       // If it's Friday night, next market is Monday
       if (day === 5) {
         tomorrow.setDate(now.getDate() + 3);
       }
-      
+
       tomorrow.setHours(4, 0, 0, 0);
-      
+
       const diffMs = tomorrow.getTime() - now.getTime();
       const diffHrs = Math.floor(diffMs / (1000 * 60 * 60));
       const diffMins = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
-      
+
       setTimeToEvent(`${diffHrs}h ${diffMins}m until pre-market trading begins`);
     };
-    
+
     calculateMarketStatus();
   }, [currentTime]);
-  
+
   // Get greeting based on time of day
   const getGreeting = () => {
     const hours = currentTime.getHours();
-    
+
     if (hours < 12) {
       return "Good morning";
     } else if (hours < 17) {
@@ -140,7 +140,7 @@ const MarketStatus = ({ activeView }: MarketStatusProps) => {
       return "Good evening";
     }
   };
-  
+
   // Get view title based on activeView
   const getViewTitle = () => {
     switch (activeView) {
@@ -171,7 +171,7 @@ const MarketStatus = ({ activeView }: MarketStatusProps) => {
         return "text-neutral-600 dark:text-neutral-400";
     }
   };
-  
+
   // Format the market status text
   const formatMarketStatus = () => {
     switch (marketStatus) {
@@ -188,41 +188,36 @@ const MarketStatus = ({ activeView }: MarketStatusProps) => {
     }
   };
 
-  return (
-    <Card className="ios-card mb-4">
-      <div className="p-5">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-2">
-          <div>
-            <h1 className="font-bold text-2xl md:text-3xl tracking-tight mb-1">
-              {getGreeting()}{user ? `, ${user.username}` : ""}
-            </h1>
-            <div className="flex items-center gap-2">
-              <p className="text-neutral-500 dark:text-neutral-400">
-                {currentTime.toLocaleDateString(undefined, { 
+  const today = currentTime.toLocaleDateString(undefined, { 
                   weekday: 'long', 
                   month: 'long', 
                   day: 'numeric',
                   year: 'numeric'
-                })}
-              </p>
-              <span className="text-neutral-400 dark:text-neutral-600">•</span>
-              <p className="text-primary-600 dark:text-primary-400 font-medium">
-                {getViewTitle()}
-              </p>
-            </div>
-          </div>
-          
-          <div className="flex items-center mt-3 md:mt-0">
-            <div className={`flex items-center ${getStatusColor()} rounded-full px-3 py-1 bg-neutral-100 dark:bg-neutral-800`}>
-              <Clock className="h-4 w-4 mr-1" />
-              <span className="font-medium text-sm">{formatMarketStatus()}</span>
-            </div>
+                });
+
+  return (
+    <Card className="ios-card mb-4">
+      <div className="p-6 space-y-4">
+        <div className="space-y-1.5">
+          <h1 className="text-2xl font-semibold tracking-tight">
+            {getGreeting()}{user ? `, <span className="text-primary">${user.username}</span>` : ""}
+          </h1>
+          <div className="text-sm text-muted-foreground flex items-center gap-2">
+            {today}
+            <span className="w-1 h-1 rounded-full bg-muted-foreground/50" />
+            <span className="font-medium text-primary/80">{getViewTitle()}</span>
           </div>
         </div>
-        
-        <p className="text-sm text-neutral-600 dark:text-neutral-400 mt-2">
-          {timeToEvent}
-        </p>
+
+        <div className="space-y-2">
+          <div className={`bg-destructive/10 text-destructive py-1.5 px-4 rounded-full inline-flex items-center text-sm font-medium ${getStatusColor()}`}>
+            <Clock className="w-3.5 h-3.5 mr-1.5 animate-pulse" /> 
+            {formatMarketStatus()}
+          </div>
+          <div className="text-sm text-muted-foreground/90 flex items-center gap-1.5">
+            <span className="font-medium">{timeToEvent}</span>
+          </div>
+        </div>
       </div>
     </Card>
   );
