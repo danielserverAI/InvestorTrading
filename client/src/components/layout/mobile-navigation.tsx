@@ -1,4 +1,4 @@
-import { Home, Clock, TrendingUp, MoonStar } from "lucide-react";
+import { Sunrise, Sun, Sunset, Moon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface MobileNavigationProps {
@@ -8,39 +8,55 @@ interface MobileNavigationProps {
 
 const MobileNavigation = ({ activeView, setActiveView }: MobileNavigationProps) => {
   return (
-    <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-neutral-900 border-t border-neutral-200 dark:border-neutral-800 z-50">
-      <div className="flex justify-around py-2">
+    <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white/90 dark:bg-neutral-900/90 backdrop-blur-xl border-t border-neutral-200 dark:border-neutral-800 z-50 px-4 pb-6 pt-2">
+      <div className="bg-neutral-100 dark:bg-neutral-800 rounded-full p-1.5 flex justify-between">
         <Button
           variant="ghost"
-          className={`flex flex-col items-center p-2 ${activeView === "morning" ? "text-primary-500" : "text-neutral-500"}`}
+          className={`flex flex-col items-center rounded-full flex-1 pt-2 pb-1 ${
+            activeView === "morning" 
+              ? "bg-white dark:bg-neutral-700 shadow-sm text-primary-500 dark:text-primary-400" 
+              : "text-neutral-500"
+          }`}
           onClick={() => setActiveView("morning")}
         >
-          <Home className="h-5 w-5" />
-          <span className="text-xs mt-1">Morning</span>
+          <Sunrise className="h-5 w-5" />
+          <span className="text-xs mt-1 font-medium">Morning</span>
         </Button>
         <Button
           variant="ghost"
-          className={`flex flex-col items-center p-2 ${activeView === "midday" ? "text-primary-500" : "text-neutral-500"}`}
+          className={`flex flex-col items-center rounded-full flex-1 pt-2 pb-1 ${
+            activeView === "midday" 
+              ? "bg-white dark:bg-neutral-700 shadow-sm text-primary-500 dark:text-primary-400" 
+              : "text-neutral-500"
+          }`}
           onClick={() => setActiveView("midday")}
         >
-          <Clock className="h-5 w-5" />
-          <span className="text-xs mt-1">Midday</span>
+          <Sun className="h-5 w-5" />
+          <span className="text-xs mt-1 font-medium">Midday</span>
         </Button>
         <Button
           variant="ghost"
-          className={`flex flex-col items-center p-2 ${activeView === "power" ? "text-primary-500" : "text-neutral-500"}`}
+          className={`flex flex-col items-center rounded-full flex-1 pt-2 pb-1 ${
+            activeView === "power" 
+              ? "bg-white dark:bg-neutral-700 shadow-sm text-primary-500 dark:text-primary-400" 
+              : "text-neutral-500"
+          }`}
           onClick={() => setActiveView("power")}
         >
-          <TrendingUp className="h-5 w-5" />
-          <span className="text-xs mt-1">Power</span>
+          <Sunset className="h-5 w-5" />
+          <span className="text-xs mt-1 font-medium">Power</span>
         </Button>
         <Button
           variant="ghost"
-          className={`flex flex-col items-center p-2 ${activeView === "after" ? "text-primary-500" : "text-neutral-500"}`}
+          className={`flex flex-col items-center rounded-full flex-1 pt-2 pb-1 ${
+            activeView === "after" 
+              ? "bg-white dark:bg-neutral-700 shadow-sm text-primary-500 dark:text-primary-400" 
+              : "text-neutral-500"
+          }`}
           onClick={() => setActiveView("after")}
         >
-          <MoonStar className="h-5 w-5" />
-          <span className="text-xs mt-1">After</span>
+          <Moon className="h-5 w-5" />
+          <span className="text-xs mt-1 font-medium">After</span>
         </Button>
       </div>
     </div>

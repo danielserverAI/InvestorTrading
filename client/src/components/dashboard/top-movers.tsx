@@ -1,112 +1,12 @@
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { AssetMover } from "@/lib/types";
 import { Button } from "@/components/ui/button";
+import { ChevronRight, ChevronUp, ChevronDown } from "lucide-react";
 import { useState } from "react";
 
 interface TopMoversProps {
   movers: AssetMover[];
 }
-
-const TopMovers = ({ movers }: TopMoversProps) => {
-  const [filter, setFilter] = useState<string>("all");
-  
-  const filteredMovers = filter === "all" 
-    ? movers 
-    : movers.filter(mover => mover.category === filter);
-
-  if (movers.length === 0) {
-    return (
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-md font-medium">Top Movers</CardTitle>
-          <div className="flex space-x-2">
-            <Button size="sm" variant={filter === "all" ? "default" : "outline"} onClick={() => setFilter("all")}>All</Button>
-            <Button size="sm" variant={filter === "portfolio" ? "default" : "outline"} onClick={() => setFilter("portfolio")}>Portfolio</Button>
-            <Button size="sm" variant={filter === "watchlist" ? "default" : "outline"} onClick={() => setFilter("watchlist")}>Watchlist</Button>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="p-8 text-center">
-            <p className="text-sm text-neutral-500">No market movers data available.</p>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 border-b">
-        <CardTitle className="text-md font-medium">Top Movers</CardTitle>
-        <div className="flex space-x-2">
-          <Button size="sm" variant={filter === "all" ? "default" : "outline"} onClick={() => setFilter("all")}>All</Button>
-          <Button size="sm" variant={filter === "portfolio" ? "default" : "outline"} onClick={() => setFilter("portfolio")}>Portfolio</Button>
-          <Button size="sm" variant={filter === "watchlist" ? "default" : "outline"} onClick={() => setFilter("watchlist")}>Watchlist</Button>
-        </div>
-      </CardHeader>
-      <CardContent className="p-0">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-neutral-50 dark:bg-neutral-900/50 text-neutral-500 dark:text-neutral-400">
-              <tr>
-                <th className="text-left py-2 px-4 font-medium">Symbol</th>
-                <th className="text-right py-2 px-4 font-medium">Price</th>
-                <th className="text-right py-2 px-4 font-medium">Change</th>
-                <th className="text-right py-2 px-4 font-medium">% Change</th>
-                <th className="text-right py-2 px-4 font-medium">Volume</th>
-                <th className="text-right py-2 px-4 font-medium">Market Cap</th>
-                <th className="text-right py-2 px-4 font-medium">Chart</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-neutral-200 dark:divide-neutral-700">
-              {filteredMovers.map((mover, index) => {
-                const isPositive = mover.priceChangePercent > 0;
-                const rowBgClass = getRowBackgroundClass(mover.category);
-                
-                return (
-                  <tr key={index} className={rowBgClass}>
-                    <td className="py-3 px-4">
-                      <div className="flex items-center">
-                        <div className="h-7 w-7 rounded-full bg-neutral-200 dark:bg-neutral-700 flex items-center justify-center text-xs font-medium mr-2">
-                          {mover.symbol}
-                        </div>
-                        <div>
-                          <div className="font-medium">{mover.name}</div>
-                          <div className="text-xs text-neutral-500 dark:text-neutral-400">{getCategoryLabel(mover.category)}</div>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="py-3 px-4 text-right tabular-nums">${mover.price.toFixed(2)}</td>
-                    <td className={`py-3 px-4 text-right tabular-nums ${isPositive ? 'text-success-500' : 'text-danger-500'}`}>
-                      {isPositive ? '+' : ''}{mover.priceChange.toFixed(2)}
-                    </td>
-                    <td className={`py-3 px-4 text-right tabular-nums ${isPositive ? 'text-success-500' : 'text-danger-500'}`}>
-                      {isPositive ? '+' : ''}{mover.priceChangePercent.toFixed(2)}%
-                    </td>
-                    <td className="py-3 px-4 text-right tabular-nums">{formatVolume(mover.volume)}</td>
-                    <td className="py-3 px-4 text-right tabular-nums">{formatMarketCap(mover.marketCap)}</td>
-                    <td className="py-3 px-4">
-                      <div className={`mini-chart h-8 w-24 ${isPositive ? 'bg-success-500/10' : 'bg-danger-500/10'} rounded relative overflow-hidden ml-auto`}>
-                        <div className={`absolute bottom-0 left-0 right-0 h-1/2 border-t ${isPositive ? 'border-success-500/50' : 'border-danger-500/50'}`}></div>
-                        {/* Simplified chart visualization */}
-                        {Array.from({ length: 5 }).map((_, i) => (
-                          <div 
-                            key={i} 
-                            className={`absolute bottom-0 left-[${i * 20}%] h-${3 + Math.floor(Math.random() * 6)} w-1 ${isPositive ? 'bg-success-500/30' : 'bg-danger-500/30'}`}
-                          ></div>
-                        ))}
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      </CardContent>
-    </Card>
-  );
-};
 
 // Helper functions
 const formatVolume = (volume: number): string => {
@@ -131,17 +31,6 @@ const formatMarketCap = (marketCap: number): string => {
   }
 };
 
-const getRowBackgroundClass = (category: string): string => {
-  switch (category) {
-    case 'portfolio':
-      return 'bg-blue-50/30 dark:bg-blue-900/10';
-    case 'watchlist':
-      return 'bg-neutral-50/50 dark:bg-neutral-900/20';
-    default:
-      return '';
-  }
-};
-
 const getCategoryLabel = (category: string): string => {
   switch (category) {
     case 'portfolio':
@@ -155,6 +44,157 @@ const getCategoryLabel = (category: string): string => {
     default:
       return '';
   }
+};
+
+const getCategoryColor = (category: string): string => {
+  switch (category) {
+    case 'portfolio':
+      return 'bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300';
+    case 'watchlist':
+      return 'bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300';
+    case 'interest':
+      return 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300';
+    case 'considering':
+      return 'bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300';
+    default:
+      return 'bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300';
+  }
+};
+
+const TopMovers = ({ movers }: TopMoversProps) => {
+  const [filter, setFilter] = useState<string>("all");
+  
+  const filteredMovers = filter === "all" 
+    ? movers 
+    : movers.filter(mover => mover.category === filter);
+
+  if (movers.length === 0) {
+    return (
+      <Card className="ios-card overflow-hidden mb-4">
+        <div className="p-5 text-center">
+          <h2 className="ios-header mb-1">Market Movers</h2>
+          <p className="text-sm text-neutral-500">No market movers data available.</p>
+        </div>
+      </Card>
+    );
+  }
+
+  // Sort by price change percentage (absolute value)
+  const sortedMovers = [...filteredMovers].sort((a, b) => 
+    Math.abs(b.priceChangePercent) - Math.abs(a.priceChangePercent)
+  );
+
+  return (
+    <Card className="ios-card overflow-hidden mb-4">
+      <div className="p-4">
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="ios-header">Market Movers</h2>
+          <Button variant="ghost" size="sm" className="text-primary-500 font-medium rounded-full -mr-2">
+            See All <ChevronRight className="h-3.5 w-3.5 ml-0.5" />
+          </Button>
+        </div>
+        
+        {/* Filter Tabs - iOS Style */}
+        <div className="mb-3 -mx-1 flex overflow-auto no-scrollbar">
+          <Button 
+            variant="ghost"
+            size="sm"
+            onClick={() => setFilter("all")}
+            className={`whitespace-nowrap rounded-full mr-1 px-4 ${
+              filter === "all" 
+                ? "bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 font-medium" 
+                : "text-neutral-500"
+            }`}
+          >
+            All Assets
+          </Button>
+          <Button 
+            variant="ghost"
+            size="sm"
+            onClick={() => setFilter("portfolio")}
+            className={`whitespace-nowrap rounded-full mr-1 px-4 ${
+              filter === "portfolio" 
+                ? "bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 font-medium" 
+                : "text-neutral-500"
+            }`}
+          >
+            Your Portfolio
+          </Button>
+          <Button 
+            variant="ghost"
+            size="sm"
+            onClick={() => setFilter("watchlist")}
+            className={`whitespace-nowrap rounded-full mr-1 px-4 ${
+              filter === "watchlist" 
+                ? "bg-neutral-200 dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 font-medium" 
+                : "text-neutral-500"
+            }`}
+          >
+            Your Watchlist
+          </Button>
+        </div>
+      </div>
+      
+      <div className="px-4 pb-4">
+        <div className="rounded-xl overflow-hidden bg-neutral-50/80 dark:bg-neutral-900/50 backdrop-blur-sm">
+          {/* Movers Cards - iOS Style */}
+          {sortedMovers.map((mover, index) => {
+            const isPositive = mover.priceChangePercent > 0;
+            const categoryColor = getCategoryColor(mover.category);
+            
+            return (
+              <div 
+                key={index} 
+                className={`p-3 flex items-center justify-between ${
+                  index !== sortedMovers.length - 1 ? "border-b border-neutral-200 dark:border-neutral-800" : ""
+                }`}
+              >
+                <div className="flex items-center space-x-3">
+                  <div className={`h-10 w-10 rounded-xl ${isPositive ? 'bg-emerald-100 dark:bg-emerald-900/30' : 'bg-rose-100 dark:bg-rose-900/30'} flex items-center justify-center`}>
+                    <div className="font-bold text-sm">
+                      {mover.symbol}
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <div className="font-semibold text-sm">{mover.name}</div>
+                    <div className="flex items-center mt-0.5">
+                      <span className={`text-xs px-2 py-0.5 rounded-full ${categoryColor}`}>
+                        {getCategoryLabel(mover.category)}
+                      </span>
+                      
+                      {mover.category === 'portfolio' && (
+                        <span className="ml-1 text-xs bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 px-2 py-0.5 rounded-full">
+                          {formatMarketCap(mover.marketCap)}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="text-right">
+                  <div className="font-semibold">
+                    ${mover.price.toFixed(2)}
+                  </div>
+                  
+                  <div className={`flex items-center mt-1 ${isPositive ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
+                    {isPositive ? (
+                      <ChevronUp className="h-3.5 w-3.5" />
+                    ) : (
+                      <ChevronDown className="h-3.5 w-3.5" />
+                    )}
+                    <span className="text-xs font-medium">
+                      {isPositive ? '+' : ''}{mover.priceChangePercent.toFixed(2)}%
+                    </span>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </Card>
+  );
 };
 
 export default TopMovers;
