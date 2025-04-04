@@ -217,7 +217,7 @@ const MarketStatus = ({ activeView }: MarketStatusProps) => {
         </div>
 
         <p className="text-sm text-muted-foreground">
-          Here's your personalized market intelligence brief for today
+          Hi {user?.username}, here's your personalized market intelligence brief for today
         </p>
       </div>
     </Card>
