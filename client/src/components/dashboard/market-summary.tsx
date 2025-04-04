@@ -78,7 +78,7 @@ const MarketSummary = ({ markets }: MarketSummaryProps) => {
               return (
                 <div 
                   key={index} 
-                  className="embla__slide flex-none w-[250px] rounded-xl overflow-hidden bg-white dark:bg-neutral-900 shadow-sm hover:shadow-md transition-shadow"
+                  className="embla__slide flex-none w-[250px] rounded-xl overflow-hidden bg-white/90 dark:bg-neutral-900/90 border-transparent shadow-sm hover:shadow-md transition-shadow backdrop-blur-sm"
                 >
                   <div className="p-4">
                     <div className="flex justify-between items-start mb-3">
