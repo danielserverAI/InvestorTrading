@@ -199,26 +199,26 @@ const MarketStatus = ({ activeView }: MarketStatusProps) => {
     <Card className="ios-card mb-4">
       <div className="p-6 space-y-6">
         <div>
-          <div className="space-y-4">
+          <div className="flex items-start justify-between">
             <div className="space-y-1">
               <h1 className="text-2xl font-semibold tracking-tight text-foreground">{getViewTitle()}</h1>
               <div className="text-sm text-muted-foreground/80">{today}</div>
             </div>
-            
-            <div className="bg-white/30 dark:bg-neutral-800/30 rounded-xl p-3 space-y-2">
-              <div className={`inline-flex items-center gap-1 text-sm font-medium ${getStatusColor()}`}>
+            <div>
+              <div className={`bg-white/50 dark:bg-neutral-800/50 py-1 px-3 rounded-full inline-flex items-center gap-1 text-sm font-medium ${getStatusColor()}`}>
                 <Clock className="w-3.5 h-3.5 animate-pulse" /> 
                 {formatMarketStatus()}
               </div>
-              <div className="text-sm text-muted-foreground">
+              <div className="text-sm text-muted-foreground text-right mt-1">
                 {timeToEvent}
               </div>
             </div>
-
-            <p className="text-sm text-muted-foreground">
-              Hi {user?.username}, here's your personalized market intelligence brief for today
-            </p>
           </div>
+        </div>
+
+        <p className="text-sm text-muted-foreground">
+          Hi {user?.username}, here's your personalized market intelligence brief for today
+        </p>
       </div>
     </Card>
   );
