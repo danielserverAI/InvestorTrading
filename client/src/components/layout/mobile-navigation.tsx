@@ -20,7 +20,7 @@ const MobileNavigation = ({ activeView, setActiveView }: MobileNavigationProps) 
           onClick={() => setActiveView("morning")}
         >
           <Sunrise className="h-5 w-5" />
-          <span className="text-xs mt-1 font-medium">Morning</span>
+          <span className="text-xs mt-0.5 font-medium">Morning</span>
         </Button>
         <Button
           variant="ghost"
@@ -32,7 +32,7 @@ const MobileNavigation = ({ activeView, setActiveView }: MobileNavigationProps) 
           onClick={() => setActiveView("midday")}
         >
           <Sun className="h-5 w-5" />
-          <span className="text-xs mt-1 font-medium">Midday</span>
+          <span className="text-xs mt-0.5 font-medium">Midday</span>
         </Button>
         <Button
           variant="ghost"
@@ -44,7 +44,7 @@ const MobileNavigation = ({ activeView, setActiveView }: MobileNavigationProps) 
           onClick={() => setActiveView("power")}
         >
           <Sunset className="h-5 w-5" />
-          <span className="text-xs mt-1 font-medium">Power</span>
+          <span className="text-xs mt-0.5 font-medium">Power</span>
         </Button>
         <Button
           variant="ghost"
@@ -56,7 +56,7 @@ const MobileNavigation = ({ activeView, setActiveView }: MobileNavigationProps) 
           onClick={() => setActiveView("after")}
         >
           <Moon className="h-5 w-5" />
-          <span className="text-xs mt-1 font-medium">After</span>
+          <span className="text-xs mt-0.5 font-medium">After</span>
         </Button>
       </div>
     </div>

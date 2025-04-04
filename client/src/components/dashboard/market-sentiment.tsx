@@ -230,7 +230,7 @@ const MarketSentiment = ({ sentiment }: MarketSentimentProps) => {
           </div>
         </div>
         
-        <div className="text-xs text-neutral-500 text-center mt-2">
+        <div className="text-xs text-neutral-500 text-center mt-2 mb-1">
           Data updated: {new Date(sentiment.date).toLocaleString()}
         </div>
       </div>
