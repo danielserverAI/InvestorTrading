@@ -44,7 +44,7 @@ const MarketStatus = ({ activeView }: MarketStatusProps) => {
         const diffHrs = Math.floor(diffMs / (1000 * 60 * 60));
         const diffMins = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
         
-        setTimeToEvent(`${diffHrs}h ${diffMins}m until pre-market trading begins`);
+        setTimeToEvent(`${diffHrs}h ${diffMins}m until market opens`);
         return;
       }
       
@@ -141,17 +141,6 @@ const MarketStatus = ({ activeView }: MarketStatusProps) => {
     }
   };
 
-  // Get header title based on active view
-  const getHeaderTitle = () => {
-    switch (activeView) {
-      case "morning": return "Morning Brief";
-      case "midday": return "Midday Pulse";
-      case "power": return "Power Hour";
-      case "after": return "After Hours";
-      default: return "Morning Brief";
-    }
-  };
-
   // Determine status color
   const getStatusColor = () => {
     switch (marketStatus) {
@@ -171,63 +160,49 @@ const MarketStatus = ({ activeView }: MarketStatusProps) => {
   const formatMarketStatus = () => {
     switch (marketStatus) {
       case "open":
-        return "Markets Open";
+        return "Market Open";
       case "closed":
         return "Market Closed";
       case "pre-market":
-        return "Pre-Market";
+        return "Pre-Market Trading";
       case "after-hours":
-        return "After-Hours";
+        return "After-Hours Trading";
       default:
         return "Market Status Unknown";
     }
   };
 
   return (
-    <div className="mb-6">
-      <div className="flex justify-between items-start">
-        <div>
-          <h1 className="text-2xl font-bold text-neutral-900 dark:text-white mb-1">
-            {getHeaderTitle()}
-          </h1>
-          <p className="text-neutral-500 dark:text-neutral-400">
-            {currentTime.toLocaleDateString(undefined, { 
-              weekday: 'long', 
-              month: 'long', 
-              day: 'numeric', 
-              year: 'numeric' 
-            })}
-          </p>
-        </div>
-        
-        <div className="text-right">
-          <div className="text-sm">
-            {marketStatus === "open" ? (
-              <span>
-                Markets Open in {timeToEvent}
-              </span>
-            ) : (
-              <span className="flex flex-row items-center justify-end">
-                <Clock className="h-4 w-4 mr-1 text-rose-500" />
-                <span className="text-rose-500 font-medium">{formatMarketStatus()}</span>
-              </span>
-            )}
+    <Card className="ios-card mb-4">
+      <div className="p-5">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-2">
+          <div>
+            <h1 className="font-bold text-2xl md:text-3xl tracking-tight mb-1">
+              {getGreeting()}{user ? `, ${user.username}` : ""}
+            </h1>
+            <p className="text-neutral-500 dark:text-neutral-400">
+              {currentTime.toLocaleDateString(undefined, { 
+                weekday: 'long', 
+                month: 'long', 
+                day: 'numeric',
+                year: 'numeric'
+              })}
+            </p>
+          </div>
+          
+          <div className="flex items-center mt-3 md:mt-0">
+            <div className={`flex items-center ${getStatusColor()} rounded-full px-3 py-1 bg-neutral-100 dark:bg-neutral-800`}>
+              <Clock className="h-4 w-4 mr-1" />
+              <span className="font-medium text-sm">{formatMarketStatus()}</span>
+            </div>
           </div>
         </div>
+        
+        <p className="text-sm text-neutral-600 dark:text-neutral-400 mt-2">
+          {timeToEvent}
+        </p>
       </div>
-      
-      <Card className="ios-card mt-4">
-        <div className="p-5">
-          <h2 className="text-2xl font-bold mb-2">
-            {getGreeting()}, {user ? user.username : ""}
-          </h2>
-          
-          <p className="text-neutral-700 dark:text-neutral-300">
-            {timeToEvent}
-          </p>
-        </div>
-      </Card>
-    </div>
+    </Card>
   );
 };
 
