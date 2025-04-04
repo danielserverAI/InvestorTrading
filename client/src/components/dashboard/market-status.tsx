@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { useUser } from "@/context/user-context";
@@ -189,34 +190,40 @@ const MarketStatus = ({ activeView }: MarketStatusProps) => {
   };
 
   const today = currentTime.toLocaleDateString(undefined, { 
-                  weekday: 'long', 
-                  month: 'long', 
-                  day: 'numeric',
-                  year: 'numeric'
-                });
+    weekday: 'long', 
+    month: 'long', 
+    day: 'numeric',
+    year: 'numeric'
+  });
 
   return (
     <Card className="ios-card mb-4">
       <div className="p-6 space-y-4">
-        <div className="space-y-1.5">
-          <h1 className="text-2xl font-semibold tracking-tight">
-            {getGreeting()}{user ? `, <span className="text-primary">${user.username}</span>` : ""}
-          </h1>
-          <div className="text-sm text-muted-foreground flex items-center gap-2">
-            {today}
-            <span className="w-1 h-1 rounded-full bg-muted-foreground/50" />
-            <span className="font-medium text-primary/80">{getViewTitle()}</span>
+        <div className="flex justify-between items-start">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <h1 className="text-xl font-semibold">{getViewTitle()}</h1>
+              <span className="text-sm text-muted-foreground">{today}</span>
+            </div>
+          </div>
+          <div className="space-y-1 text-right">
+            <div className={`bg-destructive/10 text-destructive py-1 px-3 rounded-full inline-flex items-center text-sm font-medium ${getStatusColor()}`}>
+              <Clock className="w-3.5 h-3.5 mr-1.5 animate-pulse" /> 
+              {formatMarketStatus()}
+            </div>
+            <div className="text-sm text-muted-foreground">
+              {timeToEvent}
+            </div>
           </div>
         </div>
 
-        <div className="space-y-2">
-          <div className={`bg-destructive/10 text-destructive py-1.5 px-4 rounded-full inline-flex items-center text-sm font-medium ${getStatusColor()}`}>
-            <Clock className="w-3.5 h-3.5 mr-1.5 animate-pulse" /> 
-            {formatMarketStatus()}
+        <div className="space-y-1.5 pt-2 border-t">
+          <div className="text-2xl font-semibold tracking-tight">
+            {getGreeting()}{user ? `, ${user.username}` : ""}
           </div>
-          <div className="text-sm text-muted-foreground/90 flex items-center gap-1.5">
-            <span className="font-medium">{timeToEvent}</span>
-          </div>
+          <p className="text-sm text-muted-foreground">
+            Here's your personalized market intelligence brief for today
+          </p>
         </div>
       </div>
     </Card>
