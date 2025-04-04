@@ -200,8 +200,11 @@ const MarketStatus = ({ activeView }: MarketStatusProps) => {
     <Card className="ios-card mb-4">
       <div className="p-6 space-y-6">
         <div>
-          <div className="flex items-start justify-between mb-2">
-            <h1 className="text-3xl font-bold tracking-tight">{getViewTitle()}</h1>
+          <div className="flex items-start justify-between">
+            <div className="space-y-0.5">
+              <h1 className="text-3xl font-bold tracking-tight">{getViewTitle()}</h1>
+              <div className="text-sm text-muted-foreground">{today}</div>
+            </div>
             <div>
               <div className={`bg-destructive/10 text-destructive py-1 px-3 rounded-full inline-flex items-center text-sm font-medium ${getStatusColor()}`}>
                 <Clock className="w-3.5 h-3.5 mr-1.5 animate-pulse" /> 
@@ -212,7 +215,6 @@ const MarketStatus = ({ activeView }: MarketStatusProps) => {
               </div>
             </div>
           </div>
-          <div className="text-sm text-muted-foreground">{today}</div>
         </div>
         
         <p className="text-sm text-muted-foreground">
