@@ -39,4 +39,38 @@
   .ios-button {
     @apply rounded-full font-medium transition-all;
   }
+  
+  /* Hide scrollbar */
+  .no-scrollbar {
+    -ms-overflow-style: none;  /* IE and Edge */
+    scrollbar-width: none;  /* Firefox */
+  }
+  
+  .no-scrollbar::-webkit-scrollbar {
+    display: none; /* Chrome, Safari, Opera */
+  }
+  
+  /* Market Summary Card Styles */
+  .market-summary-card {
+    --slide-spacing: 1rem;
+    --slide-size: 250px;
+  }
+  
+  .embla {
+    overflow: hidden;
+    width: 100%;
+  }
+  
+  .embla__container {
+    display: flex;
+    backface-visibility: hidden;
+  }
+  
+  .embla__slide {
+    flex: 0 0 var(--slide-size);
+    min-width: 0;
+    position: relative;
+    margin-right: var(--slide-spacing);
+    scroll-snap-align: start;
+  }
 }
