@@ -262,16 +262,16 @@ const CalendarEvents = ({ earnings, dividends, economic = [] }: CalendarEventsPr
                         className="flex flex-col p-3 rounded-lg border shadow-sm bg-card">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center">
-                            <Badge variant="outline" className={getCategoryClass(event.category)}>
+                            <Badge className={`flex items-center ${getEventBadgeClass(event.type)}`}>
+                              {getEventIcon(event.type)}
+                              {formatEventType(event.type)}
+                            </Badge>
+                            <Badge variant="secondary" className={`ml-2 ${getCategoryClass(event.category)}`}>
                               {event.category === 'interest' ? 'Might Interest You' :
                                event.category === 'portfolio' ? 'Your Portfolio' :
                                event.category === 'watchlist' ? 'Your Watchlist' :
                                event.category === 'considering' ? 'Worth Considering' :
                                event.category}
-                            </Badge>
-                            <Badge className={`ml-2 flex items-center ${getEventBadgeClass(event.type)}`}>
-                              {getEventIcon(event.type)}
-                              {formatEventType(event.type)}
                             </Badge>
                           </div>
                           {event.type === 'earnings' && event.details?.beforeMarket && (
