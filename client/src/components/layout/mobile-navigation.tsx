@@ -9,13 +9,13 @@ interface MobileNavigationProps {
 const MobileNavigation = ({ activeView, setActiveView }: MobileNavigationProps) => {
   return (
     <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white/90 dark:bg-neutral-900/90 backdrop-blur-xl border-t border-neutral-200 dark:border-neutral-800 z-50 px-4 pb-6 pt-2">
-      <div className="bg-neutral-100 dark:bg-neutral-800 rounded-full p-1.5 flex justify-between">
+      <div className="bg-neutral-100 dark:bg-neutral-800/80 rounded-full p-1.5 flex justify-between">
         <Button
           variant="ghost"
           className={`flex flex-col items-center rounded-full flex-1 py-1.5 ${
             activeView === "morning" 
               ? "bg-white dark:bg-neutral-700 shadow-sm text-primary-500 dark:text-primary-400" 
-              : "text-neutral-500"
+              : "text-neutral-500 dark:text-neutral-400"
           }`}
           onClick={() => setActiveView("morning")}
         >
@@ -29,7 +29,7 @@ const MobileNavigation = ({ activeView, setActiveView }: MobileNavigationProps) 
           className={`flex flex-col items-center rounded-full flex-1 py-1.5 ${
             activeView === "midday" 
               ? "bg-white dark:bg-neutral-700 shadow-sm text-primary-500 dark:text-primary-400" 
-              : "text-neutral-500"
+              : "text-neutral-500 dark:text-neutral-400"
           }`}
           onClick={() => setActiveView("midday")}
         >
@@ -43,7 +43,7 @@ const MobileNavigation = ({ activeView, setActiveView }: MobileNavigationProps) 
           className={`flex flex-col items-center rounded-full flex-1 py-1.5 ${
             activeView === "power" 
               ? "bg-white dark:bg-neutral-700 shadow-sm text-primary-500 dark:text-primary-400" 
-              : "text-neutral-500"
+              : "text-neutral-500 dark:text-neutral-400"
           }`}
           onClick={() => setActiveView("power")}
         >
@@ -57,7 +57,7 @@ const MobileNavigation = ({ activeView, setActiveView }: MobileNavigationProps) 
           className={`flex flex-col items-center rounded-full flex-1 py-1.5 ${
             activeView === "after" 
               ? "bg-white dark:bg-neutral-700 shadow-sm text-primary-500 dark:text-primary-400" 
-              : "text-neutral-500"
+              : "text-neutral-500 dark:text-neutral-400"
           }`}
           onClick={() => setActiveView("after")}
         >

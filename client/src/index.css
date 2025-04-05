@@ -12,14 +12,14 @@
   }
 
   body {
-    @apply antialiased bg-neutral-50 dark:bg-neutral-950 text-foreground;
+    @apply antialiased bg-neutral-50 dark:bg-neutral-900 text-foreground;
     font-family: var(--font-sf);
     -webkit-tap-highlight-color: transparent;
   }
   
   /* iOS-style cards */
   .ios-card {
-    @apply rounded-2xl bg-white/90 dark:bg-neutral-900/90 shadow-sm border-transparent;
+    @apply rounded-2xl bg-white/90 dark:bg-neutral-800/90 shadow-sm border-transparent;
     backdrop-filter: blur(20px);
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05), 
                 0 1px 2px rgba(0, 0, 0, 0.03);
@@ -33,7 +33,7 @@
   
   /* iOS-style subheaders */
   .ios-subheader {
-    @apply text-sm font-medium text-neutral-500 dark:text-neutral-400;
+    @apply text-sm font-medium text-neutral-500 dark:text-neutral-300;
     letter-spacing: -0.01em;
   }
   
@@ -41,10 +41,20 @@
   .ios-button {
     @apply rounded-full font-medium transition-all;
   }
+  
+  /* Negative change (red) */
+  .text-negative {
+    @apply text-red-600 dark:text-red-500;
+  }
+  
+  /* Positive change (green) */
+  .text-positive {
+    @apply text-green-600 dark:text-green-500;
+  }
 
   /* Menu item styles */
   .menu-item {
-    @apply flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors hover:bg-white/50 dark:hover:bg-neutral-800/50;
+    @apply flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors hover:bg-white/50 dark:hover:bg-neutral-700/70;
   }
   
   /* Hide scrollbar */

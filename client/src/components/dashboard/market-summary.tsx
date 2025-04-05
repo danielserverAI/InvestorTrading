@@ -47,7 +47,7 @@ const MarketSummary = ({ markets }: MarketSummaryProps) => {
             <Button 
               variant="ghost" 
               size="icon" 
-              className="rounded-full h-8 w-8 bg-neutral-100 dark:bg-neutral-800"
+              className="rounded-full h-8 w-8 bg-neutral-100 dark:bg-neutral-700"
               onClick={scrollPrev}
             >
               <ChevronLeft className="h-4 w-4" />
@@ -55,7 +55,7 @@ const MarketSummary = ({ markets }: MarketSummaryProps) => {
             <Button 
               variant="ghost" 
               size="icon" 
-              className="rounded-full h-8 w-8 bg-neutral-100 dark:bg-neutral-800"
+              className="rounded-full h-8 w-8 bg-neutral-100 dark:bg-neutral-700"
               onClick={scrollNext}
             >
               <ChevronRight className="h-4 w-4" />
@@ -68,23 +68,23 @@ const MarketSummary = ({ markets }: MarketSummaryProps) => {
             {markets.map((market, index) => {
               const isPositive = market.change > 0;
               const colorClass = isPositive 
-                ? "text-emerald-600 dark:text-emerald-400" 
-                : "text-rose-600 dark:text-rose-400";
+                ? "text-positive" 
+                : "text-negative";
               
               const bgClass = isPositive 
-                ? "bg-emerald-50 dark:bg-emerald-900/20" 
-                : "bg-rose-50 dark:bg-rose-900/20";
+                ? "bg-emerald-50 dark:bg-emerald-900/30" 
+                : "bg-rose-50 dark:bg-rose-900/30";
               
               return (
                 <div 
                   key={index} 
-                  className="embla__slide flex-none w-[250px] rounded-xl overflow-hidden bg-white/90 dark:bg-neutral-900/90 border-transparent shadow-sm hover:shadow-md transition-shadow backdrop-blur-sm"
+                  className="embla__slide flex-none w-[250px] rounded-xl overflow-hidden bg-white/90 dark:bg-neutral-800/90 border-transparent shadow-sm hover:shadow-md transition-shadow backdrop-blur-sm"
                 >
                   <div className="p-4">
                     <div className="flex justify-between items-start mb-3">
                       <div>
                         <div className="font-semibold text-lg">{market.name}</div>
-                        <div className="text-xs text-neutral-500">{market.symbol}</div>
+                        <div className="text-xs text-neutral-500 dark:text-neutral-400">{market.symbol}</div>
                       </div>
                       <div className={`px-2 py-1 rounded-lg ${bgClass}`}>
                         <div className={`font-medium text-xs ${colorClass}`}>
