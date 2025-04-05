@@ -197,10 +197,10 @@ const CalendarEvents = ({ earnings, dividends, economic = [] }: CalendarEventsPr
         return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300';
       case 'watchlist':
         return 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300';
-      case 'interest':
-        return 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-300';
       case 'considering':
         return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300';
+      case 'interest':
+        return 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-300';
       default:
         return 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300';
     }
@@ -263,7 +263,11 @@ const CalendarEvents = ({ earnings, dividends, economic = [] }: CalendarEventsPr
                         <div className="flex items-center justify-between">
                           <div className="flex items-center">
                             <Badge variant="outline" className={getCategoryClass(event.category)}>
-                              {event.category}
+                              {event.category === 'interest' ? 'Might Interest You' :
+                               event.category === 'portfolio' ? 'Your Portfolio' :
+                               event.category === 'watchlist' ? 'Your Watchlist' :
+                               event.category === 'considering' ? 'Worth Considering' :
+                               event.category}
                             </Badge>
                             <Badge className={`ml-2 flex items-center ${getEventBadgeClass(event.type)}`}>
                               {getEventIcon(event.type)}
