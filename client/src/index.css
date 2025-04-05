@@ -67,6 +67,19 @@
     display: none; /* Chrome, Safari, Opera */
   }
   
+  /* Swipe animations */
+  .swipe-action-right {
+    transform: translateX(80px);
+  }
+
+  .swipe-action-left {
+    transform: translateX(-80px);
+  }
+
+  .swipe-action-indicator {
+    opacity: 1 !important;
+  }
+  
   /* Market Summary Card Styles */
   .market-summary-card {
     --slide-spacing: 1rem;
