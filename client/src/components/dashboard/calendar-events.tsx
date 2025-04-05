@@ -259,23 +259,42 @@ const CalendarEvents = ({ earnings, dividends, economic = [] }: CalendarEventsPr
                   <div className="space-y-2">
                     {events.map((event, idx) => (
                       <div key={`${event.symbol}-${event.type}-${idx}`} 
-                        className="w-full rounded-xl bg-white dark:bg-neutral-800 p-4 mb-2">
-                        <div className="flex justify-between items-start">
-                          <div className="flex items-start gap-3">
-                            <div className="h-12 w-12 bg-emerald-100 dark:bg-emerald-900/30 rounded-xl flex items-center justify-center">
-                              <span className="font-bold">{event.symbol}</span>
-                            </div>
-                            <div>
-                              <div className="text-base font-medium mb-1">{event.name}</div>
-                              <div className="flex items-center gap-2">
-                                {event.type === 'earnings' && (
-                                  <span className="px-3 py-1 text-sm font-medium bg-amber-100 dark:bg-amber-900/30 text-amber-900 dark:text-amber-300 rounded-full">
-                                    Earnings
-                                  </span>
-                                )}
-                                <span className="px-3 py-1 text-sm font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-900 dark:text-blue-300 rounded-full">
-                                    Your Portfolio
-                                  </span>
+                        className="w-full rounded-xl bg-white/90 dark:bg-neutral-700/95 border-transparent shadow-sm hover:shadow-md transition-shadow backdrop-blur-sm">
+                        <div className="p-4">
+                          <div className="flex justify-between items-start">
+                            <div className="flex items-center gap-2">
+                              <div>
+                                <div className="flex items-center gap-2">
+                                  <span className="font-medium text-base">{event.symbol}</span>
+                                  <Badge variant="secondary" className={getEventBadgeClass(event.type)}>
+                                    {formatEventType(event.type)}
+                                  </Badge>
+                                  <Badge variant="outline" className={`text-${
+                                    event.category === 'portfolio' ? 'blue' :
+                                    event.category === 'watchlist' ? 'purple' :
+                                    event.category === 'considering' ? 'green' :
+                                    'amber'
+                                  }-700 dark:text-${
+                                    event.category === 'portfolio' ? 'blue' :
+                                    event.category === 'watchlist' ? 'purple' :
+                                    event.category === 'considering' ? 'green' :
+                                    'amber'
+                                  }-300 font-medium px-2 py-0.5 bg-${
+                                    event.category === 'portfolio' ? 'blue' :
+                                    event.category === 'watchlist' ? 'purple' :
+                                    event.category === 'considering' ? 'green' :
+                                    'amber'
+                                  }-100 dark:bg-${
+                                    event.category === 'portfolio' ? 'blue' :
+                                    event.category === 'watchlist' ? 'purple' :
+                                    event.category === 'considering' ? 'green' :
+                                    'amber'
+                                  }-900/30`}>
+                                    {event.category === 'portfolio' ? 'Your Portfolio' :
+                                     event.category === 'watchlist' ? 'Your Watchlist' :
+                                     event.category === 'considering' ? 'Worth Considering' :
+                                     'Might Interest You'}
+                                  </Badge>
                                 </div>
                                 <div className="text-sm text-neutral-500 dark:text-neutral-400">{event.name}</div>
                               </div>
