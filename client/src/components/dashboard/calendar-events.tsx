@@ -259,7 +259,7 @@ const CalendarEvents = ({ earnings, dividends, economic = [] }: CalendarEventsPr
                   <div className="space-y-2">
                     {events.map((event, idx) => (
                       <div key={`${event.symbol}-${event.type}-${idx}`} 
-                        className="w-full rounded-lg bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 hover:border-neutral-300 dark:hover:border-neutral-600 transition-colors">
+                        className="w-full rounded-lg bg-white/90 dark:bg-neutral-800/95 border border-neutral-200/50 dark:border-neutral-700/50 hover:border-neutral-300 dark:hover:border-neutral-600 backdrop-blur-sm transition-colors shadow-sm">
                         <div className="p-4">
                           <div className="flex justify-between items-start">
                             <div className="flex items-center gap-2">
