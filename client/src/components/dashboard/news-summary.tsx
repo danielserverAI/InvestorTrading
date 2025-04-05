@@ -350,6 +350,18 @@ const NewsSummary = ({ news }: NewsSummaryProps) => {
             </Button>
           </div>
         )}
+        
+        {sortedNews.length > 0 && (
+          <div className="border-t border-neutral-200 dark:border-neutral-800 p-4 text-center">
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="text-primary-500 font-medium w-full rounded-full"
+            >
+              See More News
+            </Button>
+          </div>
+        )}
       </div>
     </Card>
   );

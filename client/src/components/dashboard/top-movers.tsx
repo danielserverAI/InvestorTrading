@@ -49,13 +49,13 @@ const getCategoryLabel = (category: string): string => {
 const getCategoryColor = (category: string): string => {
   switch (category) {
     case 'portfolio':
-      return 'bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300';
+      return 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300';
     case 'watchlist':
-      return 'bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300';
+      return 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300';
     case 'interest':
       return 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300';
     case 'considering':
-      return 'bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300';
+      return 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300';
     default:
       return 'bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300';
   }
@@ -114,7 +114,7 @@ const TopMovers = ({ movers }: TopMoversProps) => {
             onClick={() => setFilter("portfolio")}
             className={`whitespace-nowrap rounded-full mr-1 px-4 ${
               filter === "portfolio" 
-                ? "bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 font-medium" 
+                ? "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 font-medium" 
                 : "text-neutral-500"
             }`}
           >
@@ -126,7 +126,7 @@ const TopMovers = ({ movers }: TopMoversProps) => {
             onClick={() => setFilter("watchlist")}
             className={`whitespace-nowrap rounded-full mr-1 px-4 ${
               filter === "watchlist" 
-                ? "bg-neutral-200 dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 font-medium" 
+                ? "bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 font-medium" 
                 : "text-neutral-500"
             }`}
           >

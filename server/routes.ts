@@ -118,7 +118,7 @@ const sampleMarketData = {
       {
         symbol: "ORCL",
         name: "Oracle Corp.",
-        reportDate: "2023-06-11T00:00:00.000Z",
+        reportDate: "2025-04-08T00:00:00.000Z",
         estimatedEPS: 1.32,
         beforeMarket: false,
         category: "portfolio"
@@ -126,7 +126,7 @@ const sampleMarketData = {
       {
         symbol: "ADBE",
         name: "Adobe Inc.",
-        reportDate: "2023-06-13T00:00:00.000Z",
+        reportDate: "2025-04-10T00:00:00.000Z",
         estimatedEPS: 4.14,
         beforeMarket: false,
         category: "watchlist"
@@ -134,7 +134,7 @@ const sampleMarketData = {
       {
         symbol: "FDX",
         name: "FedEx Corp.",
-        reportDate: "2023-06-18T00:00:00.000Z",
+        reportDate: "2025-04-15T00:00:00.000Z",
         estimatedEPS: 5.43,
         beforeMarket: false,
         category: "interest"
@@ -142,8 +142,40 @@ const sampleMarketData = {
       {
         symbol: "KMX",
         name: "CarMax Inc.",
-        reportDate: "2023-06-21T00:00:00.000Z",
+        reportDate: "2025-04-18T00:00:00.000Z",
         estimatedEPS: 0.42,
+        beforeMarket: true,
+        category: "considering"
+      },
+      {
+        symbol: "GOOGL",
+        name: "Alphabet Inc.",
+        reportDate: "2025-04-22T00:00:00.000Z",
+        estimatedEPS: 1.67,
+        beforeMarket: false,
+        category: "watchlist"
+      },
+      {
+        symbol: "MSFT",
+        name: "Microsoft Corp.",
+        reportDate: "2025-04-25T00:00:00.000Z",
+        estimatedEPS: 2.86,
+        beforeMarket: false,
+        category: "portfolio"
+      },
+      {
+        symbol: "AMZN",
+        name: "Amazon.com Inc.",
+        reportDate: "2025-05-02T00:00:00.000Z",
+        estimatedEPS: 0.95,
+        beforeMarket: false,
+        category: "interest"
+      },
+      {
+        symbol: "NFLX",
+        name: "Netflix Inc.",
+        reportDate: "2025-05-06T00:00:00.000Z",
+        estimatedEPS: 4.23,
         beforeMarket: true,
         category: "considering"
       }

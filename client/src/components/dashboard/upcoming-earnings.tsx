@@ -144,9 +144,13 @@ const formatEarningsDate = (dateString: string): string => {
 const getEarningsBorderClass = (category: string): string => {
   switch (category) {
     case 'portfolio':
-      return 'border border-primary-100 dark:border-primary-900/50 bg-primary-50/50 dark:bg-primary-900/20';
+      return 'border border-blue-100 dark:border-blue-900/50 bg-blue-50/50 dark:bg-blue-900/20';
     case 'watchlist':
-      return 'border border-neutral-200 dark:border-neutral-700 bg-neutral-50/50 dark:bg-neutral-800/50';
+      return 'border border-purple-100 dark:border-purple-900/50 bg-purple-50/50 dark:bg-purple-900/20';
+    case 'interest':
+      return 'border border-amber-100 dark:border-amber-900/50 bg-amber-50/50 dark:bg-amber-900/20';
+    case 'considering':
+      return 'border border-green-100 dark:border-green-900/50 bg-green-50/50 dark:bg-green-900/20';
     default:
       return 'border border-neutral-200 dark:border-neutral-700';
   }
@@ -155,9 +159,15 @@ const getEarningsBorderClass = (category: string): string => {
 const getCategoryTagClass = (category: string): string => {
   switch (category) {
     case 'portfolio':
-      return 'text-primary-500 font-medium px-2 py-0.5 bg-primary-100 dark:bg-primary-900/30';
+      return 'text-blue-700 dark:text-blue-300 font-medium px-2 py-0.5 bg-blue-100 dark:bg-blue-900/30';
+    case 'watchlist':
+      return 'text-purple-700 dark:text-purple-300 font-medium px-2 py-0.5 bg-purple-100 dark:bg-purple-900/30';
+    case 'interest':
+      return 'text-amber-700 dark:text-amber-300 font-medium px-2 py-0.5 bg-amber-100 dark:bg-amber-900/30';
+    case 'considering':
+      return 'text-green-700 dark:text-green-300 font-medium px-2 py-0.5 bg-green-100 dark:bg-green-900/30';
     default:
-      return 'text-neutral-500 font-medium px-2 py-0.5 bg-neutral-100 dark:bg-neutral-700';
+      return 'text-neutral-700 dark:text-neutral-300 font-medium px-2 py-0.5 bg-neutral-100 dark:bg-neutral-700';
   }
 };
 
