@@ -259,7 +259,7 @@ const CalendarEvents = ({ earnings, dividends, economic = [] }: CalendarEventsPr
                   <div className="space-y-2">
                     {events.map((event, idx) => (
                       <div key={`${event.symbol}-${event.type}-${idx}`} 
-                        className="embla__slide flex-none w-[250px] rounded-xl overflow-hidden bg-white/90 dark:bg-neutral-700/95 border-transparent shadow-sm hover:shadow-md transition-shadow backdrop-blur-sm">
+                        className="w-full rounded-xl overflow-hidden bg-white/90 dark:bg-neutral-700/95 border-transparent shadow-sm hover:shadow-md transition-shadow backdrop-blur-sm">
                         <div className="p-4">
                           <div className="flex justify-between items-start mb-3">
                             <div>
