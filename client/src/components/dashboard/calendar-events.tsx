@@ -279,7 +279,7 @@ const CalendarEvents = ({ earnings, dividends, economic = [] }: CalendarEventsPr
                                     event.category === 'watchlist' ? 'purple' :
                                     event.category === 'considering' ? 'green' :
                                     'amber'
-                                  }-300 font-medium px-2 py-0.5 bg-${
+                                  }-300 px-2 py-0.5 bg-${
                                     event.category === 'portfolio' ? 'blue' :
                                     event.category === 'watchlist' ? 'purple' :
                                     event.category === 'considering' ? 'green' :
@@ -289,7 +289,7 @@ const CalendarEvents = ({ earnings, dividends, economic = [] }: CalendarEventsPr
                                     event.category === 'watchlist' ? 'purple' :
                                     event.category === 'considering' ? 'green' :
                                     'amber'
-                                  }-900/30`}>
+                                  }-900/30 border-0`}>
                                     {event.category === 'portfolio' ? 'Your Portfolio' :
                                      event.category === 'watchlist' ? 'Your Watchlist' :
                                      event.category === 'considering' ? 'Worth Considering' :
