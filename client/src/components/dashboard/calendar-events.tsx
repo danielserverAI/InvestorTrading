@@ -269,6 +269,17 @@ const CalendarEvents = ({ earnings, dividends, economic = [] }: CalendarEventsPr
                                   <Badge variant="secondary" className={getEventBadgeClass(event.type)}>
                                     {formatEventType(event.type)}
                                   </Badge>
+                                  <Badge variant="outline" className={`${
+                                    event.category === 'portfolio' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300' :
+                                    event.category === 'watchlist' ? 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300' :
+                                    event.category === 'considering' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300' :
+                                    'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-300'
+                                  }`}>
+                                    {event.category === 'portfolio' ? 'In Portfolio' :
+                                     event.category === 'watchlist' ? 'Watchlist' :
+                                     event.category === 'considering' ? 'Considering' :
+                                     'Interest'}
+                                  </Badge>
                                   {event.type === 'ex-dividend' || event.type === 'payment' ? (
                                     <span className="text-xs px-2 py-0.5 bg-emerald-100/50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300 rounded-full">
                                       ${event.details?.amount?.toFixed(2)}
