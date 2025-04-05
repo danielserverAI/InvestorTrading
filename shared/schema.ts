@@ -173,3 +173,47 @@ export interface EconomicEvent {
   previousValue?: string;
   forecast?: string;
 }
+
+export interface MarketSentimentData {
+  fearGreedIndex: number;
+  putCallRatio: number;
+  vix: number;
+  bullishSentiment: number;
+  date: string;
+}
+
+export interface MarketSummaryData {
+  index: string;
+  value: number;
+  change: number;
+  percentageChange: number;
+}
+
+export interface EarningsEvent {
+  symbol: string;
+  name: string;
+  reportDate: string;
+  estimatedEPS: number;
+  actualEPS: number;
+  beforeMarket: boolean;
+}
+
+
+export interface AssetMover {
+  symbol: string;
+  name: string;
+  priceChange: number;
+  priceChangePercent: number;
+  volume: number;
+}
+
+export interface MarketData {
+  news: News[];
+  topMovers: AssetMover[];
+  upcomingEarnings: EarningsEvent[];
+  tradeIdeas: TradeIdea[];
+  dividends: DividendEvent[];
+  economicEvents: EconomicEvent[];
+  marketSentiment: MarketSentimentData;
+  marketSummary: MarketSummaryData[];
+}

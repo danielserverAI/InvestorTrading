@@ -17,35 +17,35 @@ export interface IStorage {
   getUserByEmail(email: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
   updateUser(id: number, user: Partial<User>): Promise<User | undefined>;
-  
+
   // Asset methods
   getAsset(id: number): Promise<Asset | undefined>;
   getAssetBySymbol(symbol: string): Promise<Asset | undefined>;
   createAsset(asset: InsertAsset): Promise<Asset>;
   updateAsset(id: number, asset: Partial<Asset>): Promise<Asset | undefined>;
-  
+
   // UserAsset methods
   getUserAssets(userId: number): Promise<UserAsset[]>;
   createUserAsset(userAsset: InsertUserAsset): Promise<UserAsset>;
   updateUserAsset(id: number, userAsset: Partial<UserAsset>): Promise<UserAsset | undefined>;
-  
+
   // News methods
   getNews(): Promise<News[]>;
   getNewsByCategory(category: string): Promise<News[]>;
   createNews(news: InsertNews): Promise<News>;
-  
+
   // Earnings methods
   getUpcomingEarnings(): Promise<Earnings[]>;
   createEarnings(earnings: InsertEarnings): Promise<Earnings>;
-  
+
   // Dividend methods
   getUpcomingDividends(): Promise<Dividend[]>;
   createDividend(dividend: InsertDividend): Promise<Dividend>;
-  
+
   // TradeIdea methods
   getTradeIdeas(): Promise<TradeIdea[]>;
   createTradeIdea(tradeIdea: InsertTradeIdea): Promise<TradeIdea>;
-  
+
   // MarketSentiment methods
   getMarketSentiment(): Promise<MarketSentiment | undefined>;
   createMarketSentiment(sentiment: InsertMarketSentiment): Promise<MarketSentiment>;
@@ -61,7 +61,7 @@ export class MemStorage implements IStorage {
   private dividends: Map<number, Dividend>;
   private tradeIdeas: Map<number, TradeIdea>;
   private marketSentiment: Map<number, MarketSentiment>;
-  
+
   private userIdCounter: number;
   private assetIdCounter: number;
   private userAssetIdCounter: number;
@@ -80,7 +80,7 @@ export class MemStorage implements IStorage {
     this.dividends = new Map();
     this.tradeIdeas = new Map();
     this.marketSentiment = new Map();
-    
+
     this.userIdCounter = 1;
     this.assetIdCounter = 1;
     this.userAssetIdCounter = 1;
@@ -89,7 +89,7 @@ export class MemStorage implements IStorage {
     this.dividendIdCounter = 1;
     this.tradeIdeaIdCounter = 1;
     this.marketSentimentIdCounter = 1;
-    
+
     // Add a demo user for development
     this.createUser({
       username: "demo_user",
@@ -130,7 +130,7 @@ export class MemStorage implements IStorage {
   async updateUser(id: number, userData: Partial<User>): Promise<User | undefined> {
     const existingUser = this.users.get(id);
     if (!existingUser) return undefined;
-    
+
     const updatedUser = { ...existingUser, ...userData };
     this.users.set(id, updatedUser);
     return updatedUser;
@@ -157,7 +157,7 @@ export class MemStorage implements IStorage {
   async updateAsset(id: number, assetData: Partial<Asset>): Promise<Asset | undefined> {
     const existingAsset = this.assets.get(id);
     if (!existingAsset) return undefined;
-    
+
     const updatedAsset = { ...existingAsset, ...assetData };
     this.assets.set(id, updatedAsset);
     return updatedAsset;
@@ -181,7 +181,7 @@ export class MemStorage implements IStorage {
   async updateUserAsset(id: number, userAssetData: Partial<UserAsset>): Promise<UserAsset | undefined> {
     const existingUserAsset = this.userAssets.get(id);
     if (!existingUserAsset) return undefined;
-    
+
     const updatedUserAsset = { ...existingUserAsset, ...userAssetData };
     this.userAssets.set(id, updatedUserAsset);
     return updatedUserAsset;
@@ -261,3 +261,83 @@ export class MemStorage implements IStorage {
 
 // Export storage instance
 export const storage = new MemStorage();
+
+// Example Economic Events (add this section)
+interface EconomicEvent {
+  title: string;
+  date: string;
+  importance: "high" | "medium" | "low";
+  category: string;
+  description?: string;
+  previousValue?: string;
+  forecast?: string;
+}
+
+export const economicEvents: EconomicEvent[] = [
+  {
+    title: "Fed Interest Rate Decision",
+    date: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString(), // 2 days from now
+    importance: "high",
+    category: "fed",
+    description: "Federal Reserve interest rate decision and policy statement",
+    previousValue: "5.50%",
+    forecast: "5.50%"
+  },
+  {
+    title: "US GDP Growth Rate",
+    date: new Date(Date.now() + 4 * 24 * 60 * 60 * 1000).toISOString(), // 4 days from now
+    importance: "high",
+    category: "economic",
+    description: "Q4 2023 GDP Growth Rate",
+    previousValue: "4.9%",
+    forecast: "2.0%"
+  },
+  {
+    title: "Treasury Bond Auction",
+    date: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString(), // 3 days from now
+    importance: "medium",
+    category: "treasury",
+    description: "10-Year Treasury Bond Auction",
+    previousValue: "4.52%",
+    forecast: "4.45%"
+  },
+  {
+    title: "OPEC+ Meeting",
+    date: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString(), // 5 days from now
+    importance: "high",
+    category: "geopolitical",
+    description: "OPEC+ production quotas decision",
+  }
+];
+
+
+// Assuming these are defined elsewhere and imported
+const marketSummary = {};
+const news: any[] = [];
+const topMovers: any[] = [];
+const upcomingEarnings: any[] = [];
+const tradeIdeas: any[] = [];
+const dividends: any[] = [];
+
+export const mockMarketData: MarketData = {
+  marketSummary,
+  news,
+  topMovers,
+  upcomingEarnings,
+  tradeIdeas,
+  dividends,
+  economicEvents,
+  marketSentiment: {
+  }
+};
+
+interface MarketData {
+  marketSummary: any;
+  news: any[];
+  topMovers: any[];
+  upcomingEarnings: any[];
+  tradeIdeas: any[];
+  dividends: any[];
+  economicEvents: EconomicEvent[];
+  marketSentiment: any;
+}
