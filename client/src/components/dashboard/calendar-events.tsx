@@ -3,15 +3,16 @@ import { format, isSameDay, addDays, isAfter, isBefore } from 'date-fns';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { CalendarIcon, ArrowRightIcon, TrendingUpIcon, DollarSignIcon } from 'lucide-react';
+import { CalendarIcon, ArrowRightIcon, TrendingUpIcon, DollarSignIcon, BarChart3Icon, BuildingIcon, LandmarkIcon, GlobeIcon } from 'lucide-react';
 import { EarningsEvent, DividendEvent } from '@/lib/types';
 
 interface CalendarEventsProps {
   earnings: EarningsEvent[];
   dividends: DividendEvent[];
+  economic: EconomicEvent[];
 }
 
-type EventType = 'earnings' | 'ex-dividend' | 'payment';
+type EventType = 'earnings' | 'ex-dividend' | 'payment' | 'economic' | 'fed' | 'treasury' | 'geopolitical';
 
 interface CalendarEvent {
   date: Date;
@@ -86,8 +87,27 @@ const CalendarEvents = ({ earnings, dividends }: CalendarEventsProps) => {
     });
     
     // Sort events by date
+    // Add economic events
+    economic.forEach(event => {
+      const eventDate = new Date(event.date);
+      
+      events.push({
+        date: eventDate,
+        symbol: event.category.toUpperCase(),
+        name: event.title,
+        type: event.category as EventType,
+        category: 'economic',
+        details: {
+          importance: event.importance,
+          description: event.description,
+          previousValue: event.previousValue,
+          forecast: event.forecast
+        }
+      });
+    });
+
     return events.sort((a, b) => a.date.getTime() - b.date.getTime());
-  }, [earnings, dividends]);
+  }, [earnings, dividends, economic]);
   
   // Group events by date
   const eventsByDate = useMemo(() => {
@@ -141,6 +161,14 @@ const CalendarEvents = ({ earnings, dividends }: CalendarEventsProps) => {
         return 'bg-emerald-500 hover:bg-emerald-600';
       case 'payment':
         return 'bg-blue-500 hover:bg-blue-600';
+      case 'economic':
+        return 'bg-purple-500 hover:bg-purple-600';
+      case 'fed':
+        return 'bg-red-500 hover:bg-red-600';
+      case 'treasury':
+        return 'bg-cyan-500 hover:bg-cyan-600';
+      case 'geopolitical':
+        return 'bg-orange-500 hover:bg-orange-600';
       default:
         return 'bg-gray-500 hover:bg-gray-600';
     }
@@ -182,6 +210,14 @@ const CalendarEvents = ({ earnings, dividends }: CalendarEventsProps) => {
         return <CalendarIcon className="h-4 w-4 mr-1" />;
       case 'payment':
         return <DollarSignIcon className="h-4 w-4 mr-1" />;
+      case 'economic':
+        return <BarChart3Icon className="h-4 w-4 mr-1" />;
+      case 'fed':
+        return <BuildingIcon className="h-4 w-4 mr-1" />;
+      case 'treasury':
+        return <LandmarkIcon className="h-4 w-4 mr-1" />;
+      case 'geopolitical':
+        return <GlobeIcon className="h-4 w-4 mr-1" />;
       default:
         return null;
     }

@@ -154,3 +154,22 @@ export type InsertTradeIdea = z.infer<typeof insertTradeIdeaSchema>;
 
 export type MarketSentiment = typeof marketSentiment.$inferSelect;
 export type InsertMarketSentiment = z.infer<typeof insertMarketSentimentSchema>;
+
+export interface DividendEvent {
+  symbol: string;
+  name: string;
+  amount: number;
+  exDividendDate?: string;
+  paymentDate?: string;
+  category: string;
+}
+
+export interface EconomicEvent {
+  title: string;
+  date: string;
+  importance: 'high' | 'medium' | 'low';
+  category: 'economic' | 'fed' | 'treasury' | 'geopolitical';
+  description?: string;
+  previousValue?: string;
+  forecast?: string;
+}
