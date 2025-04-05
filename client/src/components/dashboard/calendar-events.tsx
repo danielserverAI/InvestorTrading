@@ -307,13 +307,6 @@ const CalendarEvents = ({ earnings, dividends, economic = [] }: CalendarEventsPr
                                 <span className="text-xs text-neutral-500 ml-1">Dividend</span>
                               </div>
                             )}
-                            <Badge variant="secondary" className={getCategoryClass(event.category)}>
-                              {event.category === 'interest' ? 'Might Interest You' :
-                               event.category === 'portfolio' ? 'Your Portfolio' :
-                               event.category === 'watchlist' ? 'Your Watchlist' :
-                               event.category === 'considering' ? 'Worth Considering' :
-                               event.category}
-                            </Badge>
                           </div>
 
                           {event.type === 'earnings' && (
