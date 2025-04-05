@@ -276,7 +276,7 @@ interface EconomicEvent {
 export const economicEvents: EconomicEvent[] = [
   {
     title: "Fed Interest Rate Decision",
-    date: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString(), // 2 days from now
+    date: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString(),
     importance: "high",
     category: "fed",
     description: "Federal Reserve interest rate decision and policy statement",
@@ -285,7 +285,7 @@ export const economicEvents: EconomicEvent[] = [
   },
   {
     title: "US GDP Growth Rate",
-    date: new Date(Date.now() + 4 * 24 * 60 * 60 * 1000).toISOString(), // 4 days from now
+    date: new Date(Date.now() + 4 * 24 * 60 * 60 * 1000).toISOString(),
     importance: "high",
     category: "economic",
     description: "Q4 2023 GDP Growth Rate",
@@ -294,7 +294,7 @@ export const economicEvents: EconomicEvent[] = [
   },
   {
     title: "Treasury Bond Auction",
-    date: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString(), // 3 days from now
+    date: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString(),
     importance: "medium",
     category: "treasury",
     description: "10-Year Treasury Bond Auction",
@@ -303,10 +303,28 @@ export const economicEvents: EconomicEvent[] = [
   },
   {
     title: "OPEC+ Meeting",
-    date: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString(), // 5 days from now
+    date: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString(),
     importance: "high",
     category: "geopolitical",
-    description: "OPEC+ production quotas decision",
+    description: "OPEC+ production quotas decision"
+  },
+  {
+    title: "US Non-Farm Payrolls",
+    date: new Date(Date.now() + 1 * 24 * 60 * 60 * 1000).toISOString(),
+    importance: "high",
+    category: "economic",
+    description: "Monthly employment report",
+    previousValue: "353K",
+    forecast: "185K"
+  },
+  {
+    title: "ECB Policy Meeting",
+    date: new Date(Date.now() + 6 * 24 * 60 * 60 * 1000).toISOString(),
+    importance: "high",
+    category: "fed",
+    description: "European Central Bank monetary policy decision",
+    previousValue: "4.50%",
+    forecast: "4.50%"
   }
 ];
 
