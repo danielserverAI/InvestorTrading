@@ -259,38 +259,40 @@ const CalendarEvents = ({ earnings, dividends, economic = [] }: CalendarEventsPr
                   <div className="space-y-2">
                     {events.map((event, idx) => (
                       <div key={`${event.symbol}-${event.type}-${idx}`} 
-                        className="flex flex-col p-3 rounded-lg border shadow-sm bg-card">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center">
-                            <Badge className={`flex items-center ${getEventBadgeClass(event.type)}`}>
-                              {getEventIcon(event.type)}
-                              {formatEventType(event.type)}
-                            </Badge>
-                            <Badge variant="secondary" className={`ml-2 ${getCategoryClass(event.category)}`}>
+                        className="embla__slide flex-none w-[250px] rounded-xl overflow-hidden bg-white/90 dark:bg-neutral-700/95 border-transparent shadow-sm hover:shadow-md transition-shadow backdrop-blur-sm">
+                        <div className="p-4">
+                          <div className="flex justify-between items-start mb-3">
+                            <div>
+                              <div className="font-semibold text-lg">{event.symbol}</div>
+                              <div className="text-xs text-neutral-500 dark:text-neutral-400">{event.name}</div>
+                            </div>
+                            <div className="flex gap-1">
+                              <Badge className={`flex items-center ${getEventBadgeClass(event.type)}`}>
+                                {getEventIcon(event.type)}
+                                {formatEventType(event.type)}
+                              </Badge>
+                            </div>
+                          </div>
+                          <div className="flex justify-between items-end">
+                            {event.type === 'earnings' && (
+                              <div className="font-bold text-xl">
+                                ${event.details?.estimatedEPS?.toFixed(2)}
+                                <span className="text-xs text-neutral-500 ml-1">Est. EPS</span>
+                              </div>
+                            )}
+                            {(event.type === 'ex-dividend' || event.type === 'payment') && (
+                              <div className="font-bold text-xl">
+                                ${event.details?.amount?.toFixed(2)}
+                                <span className="text-xs text-neutral-500 ml-1">Dividend</span>
+                              </div>
+                            )}
+                            <Badge variant="secondary" className={getCategoryClass(event.category)}>
                               {event.category === 'interest' ? 'Might Interest You' :
                                event.category === 'portfolio' ? 'Your Portfolio' :
                                event.category === 'watchlist' ? 'Your Watchlist' :
                                event.category === 'considering' ? 'Worth Considering' :
                                event.category}
                             </Badge>
-                          </div>
-                          {event.type === 'earnings' && event.details?.beforeMarket && (
-                            <Badge variant="outline" className="bg-slate-100 text-slate-800">
-                              Before Market
-                            </Badge>
-                          )}
-                          {event.type === 'earnings' && !event.details?.beforeMarket && (
-                            <Badge variant="outline" className="bg-slate-100 text-slate-800">
-                              After Market
-                            </Badge>
-                          )}
-                        </div>
-
-                        <div className="mt-2">
-                          <div className="font-semibold text-base flex items-center">
-                            {event.symbol} 
-                            <ArrowRightIcon className="h-3 w-3 mx-1" /> 
-                            {event.name}
                           </div>
 
                           {event.type === 'earnings' && (
