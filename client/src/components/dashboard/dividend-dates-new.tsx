@@ -7,10 +7,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Calendar } from "@/components/ui/calendar";
 
-interface DividendDatesProps {
-  dividends: DividendEvent[];
-}
-
 // Helper functions
 const formatDate = (dateString: string): string => {
   const date = new Date(dateString);
@@ -67,9 +63,13 @@ const getCategoryLabel = (category: string): string => {
   }
 };
 
-const DividendDates = ({ dividends }: DividendDatesProps) => {
-  const [selectedTab, setSelectedTab] = useState<string>("list");
+interface DividendDatesProps {
+  dividends: DividendEvent[];
+}
+
+const DividendDatesNew = ({ dividends }: DividendDatesProps) => {
   const [calendarView, setCalendarView] = useState<boolean>(false);
+  const [date, setDate] = useState<Date | undefined>(new Date());
   
   if (dividends.length === 0) {
     return (
@@ -130,8 +130,7 @@ const DividendDates = ({ dividends }: DividendDatesProps) => {
     return date >= twoWeeksLater;
   });
 
-  // Calendar date selection
-  const [date, setDate] = useState<Date | undefined>(new Date());
+  // Find dividends for the selected date
   const dividendsOnSelectedDate = dividends.filter(d => {
     if (!date) return false;
     
@@ -501,61 +500,6 @@ const DividendDates = ({ dividends }: DividendDatesProps) => {
       </Dialog>
     </>
   );
-
-// Helper functions
-const formatDate = (dateString: string): string => {
-  const date = new Date(dateString);
-  return date.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
 };
 
-const formatDateWithWeekday = (dateString: string): string => {
-  const date = new Date(dateString);
-  return date.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
-};
-
-const getDividendBorderClass = (category: string): string => {
-  switch (category) {
-    case 'portfolio':
-      return 'border border-blue-100 dark:border-blue-900/50 bg-blue-50/50 dark:bg-blue-900/20';
-    case 'watchlist':
-      return 'border border-purple-100 dark:border-purple-900/50 bg-purple-50/50 dark:bg-purple-900/20';
-    case 'interest':
-      return 'border border-amber-100 dark:border-amber-900/50 bg-amber-50/50 dark:bg-amber-900/20';
-    case 'considering':
-      return 'border border-green-100 dark:border-green-900/50 bg-green-50/50 dark:bg-green-900/20';
-    default:
-      return 'border border-neutral-200 dark:border-neutral-700';
-  }
-};
-
-const getCategoryTagClass = (category: string): string => {
-  switch (category) {
-    case 'portfolio':
-      return 'text-blue-700 dark:text-blue-300 font-medium px-2 py-0.5 bg-blue-100 dark:bg-blue-900/30';
-    case 'watchlist':
-      return 'text-purple-700 dark:text-purple-300 font-medium px-2 py-0.5 bg-purple-100 dark:bg-purple-900/30';
-    case 'interest':
-      return 'text-amber-700 dark:text-amber-300 font-medium px-2 py-0.5 bg-amber-100 dark:bg-amber-900/30';
-    case 'considering':
-      return 'text-green-700 dark:text-green-300 font-medium px-2 py-0.5 bg-green-100 dark:bg-green-900/30';
-    default:
-      return 'text-neutral-700 dark:text-neutral-300 font-medium px-2 py-0.5 bg-neutral-100 dark:bg-neutral-700';
-  }
-};
-
-const getCategoryLabel = (category: string): string => {
-  switch (category) {
-    case 'portfolio':
-      return 'Your Portfolio';
-    case 'watchlist':
-      return 'Your Watchlist';
-    case 'interest':
-      return 'Might Interest You';
-    case 'considering':
-      return 'Worth Considering';
-    default:
-      return '';
-  }
-};
-
-export default DividendDates;
+export default DividendDatesNew;

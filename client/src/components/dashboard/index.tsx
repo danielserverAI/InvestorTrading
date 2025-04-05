@@ -3,7 +3,7 @@ import NewsSummary from "./news-summary";
 import TopMovers from "./top-movers";
 import UpcomingEarnings from "./upcoming-earnings";
 import TradeIdeas from "./trade-ideas";
-import DividendDates from "./dividend-dates";
+import DividendDatesNew from "./dividend-dates-new";
 import MarketSentiment from "./market-sentiment";
 import MarketSummary from "./market-summary";
 import MarketStatus from "./market-status";
@@ -66,7 +66,7 @@ const Dashboard = ({ activeView }: DashboardProps) => {
       {/* Right Column - Trade Ideas & Dividends */}
       <div className="space-y-4">
         <TradeIdeas ideas={marketData?.tradeIdeas || []} />
-        <DividendDates dividends={marketData?.dividends || []} />
+        <DividendDatesNew dividends={marketData?.dividends || []} />
         <MarketSentiment sentiment={marketData?.marketSentiment} />
       </div>
     </div>

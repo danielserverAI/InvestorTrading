@@ -218,23 +218,66 @@ const sampleMarketData = {
       {
         symbol: "MSFT",
         name: "Microsoft Corp.",
-        exDividendDate: "2023-06-15T00:00:00.000Z",
+        exDividendDate: "2025-04-09T00:00:00.000Z",
+        paymentDate: "2025-04-22T00:00:00.000Z",
         amount: 0.75,
         category: "portfolio"
       },
       {
         symbol: "KO",
         name: "Coca-Cola Co.",
-        exDividendDate: "2023-06-16T00:00:00.000Z",
+        exDividendDate: "2025-04-12T00:00:00.000Z",
+        paymentDate: "2025-04-28T00:00:00.000Z",
         amount: 0.46,
         category: "watchlist"
       },
       {
         symbol: "JNJ",
         name: "Johnson & Johnson",
-        paymentDate: "2023-06-12T00:00:00.000Z",
+        exDividendDate: "2025-04-14T00:00:00.000Z",
+        paymentDate: "2025-04-30T00:00:00.000Z",
         amount: 1.19,
         category: "portfolio"
+      },
+      {
+        symbol: "PG",
+        name: "Procter & Gamble",
+        exDividendDate: "2025-04-16T00:00:00.000Z",
+        paymentDate: "2025-05-15T00:00:00.000Z",
+        amount: 0.94,
+        category: "interest"
+      },
+      {
+        symbol: "VZ",
+        name: "Verizon Communications",
+        exDividendDate: "2025-04-18T00:00:00.000Z",
+        paymentDate: "2025-05-01T00:00:00.000Z",
+        amount: 0.67,
+        category: "watchlist"
+      },
+      {
+        symbol: "PEP",
+        name: "PepsiCo Inc.",
+        exDividendDate: "2025-04-21T00:00:00.000Z",
+        paymentDate: "2025-05-10T00:00:00.000Z",
+        amount: 1.27,
+        category: "considering"
+      },
+      {
+        symbol: "HD",
+        name: "Home Depot Inc.",
+        exDividendDate: "2025-05-02T00:00:00.000Z",
+        paymentDate: "2025-05-20T00:00:00.000Z",
+        amount: 2.25,
+        category: "portfolio"
+      },
+      {
+        symbol: "MRK",
+        name: "Merck & Co.",
+        exDividendDate: "2025-05-08T00:00:00.000Z",
+        paymentDate: "2025-05-28T00:00:00.000Z",
+        amount: 0.77,
+        category: "interest"
       }
     ],
     marketSentiment: {
