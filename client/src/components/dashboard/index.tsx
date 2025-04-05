@@ -1,12 +1,11 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import NewsSummary from "./news-summary";
 import TopMovers from "./top-movers";
-import UpcomingEarnings from "./upcoming-earnings";
 import TradeIdeas from "./trade-ideas";
-import DividendDatesNew from "./dividend-dates-new";
 import MarketSentiment from "./market-sentiment";
 import MarketSummary from "./market-summary";
 import MarketStatus from "./market-status";
+import CalendarEvents from "./calendar-events";
 import { useUser } from "@/context/user-context";
 import { useMarketData } from "@/hooks/use-market-data";
 
@@ -31,14 +30,17 @@ const Dashboard = ({ activeView }: DashboardProps) => {
           <div className="h-24 ios-card animate-pulse" />
         </div>
         
+        {/* Left column */}
         <div className="lg:col-span-2 space-y-4">
-          <div className="h-96 ios-card animate-pulse" />
-          <div className="h-80 ios-card animate-pulse" />
-          <div className="h-64 ios-card animate-pulse" />
+          <div className="h-96 ios-card animate-pulse" /> {/* News */}
+          <div className="h-80 ios-card animate-pulse" /> {/* Top Movers */}
+          <div className="h-120 ios-card animate-pulse" /> {/* Calendar */}
         </div>
+        
+        {/* Right column */}
         <div className="space-y-4">
-          <div className="h-96 ios-card animate-pulse" />
-          <div className="h-64 ios-card animate-pulse" />
+          <div className="h-96 ios-card animate-pulse" /> {/* Trade Ideas */}
+          <div className="h-64 ios-card animate-pulse" /> {/* Market Sentiment */}
         </div>
       </div>
     );
@@ -60,13 +62,15 @@ const Dashboard = ({ activeView }: DashboardProps) => {
       <div className="lg:col-span-2 space-y-4">
         <NewsSummary news={marketData?.news || []} />
         <TopMovers movers={marketData?.topMovers || []} />
-        <UpcomingEarnings earnings={marketData?.upcomingEarnings || []} />
+        <CalendarEvents 
+          earnings={marketData?.upcomingEarnings || []} 
+          dividends={marketData?.dividends || []} 
+        />
       </div>
 
-      {/* Right Column - Trade Ideas & Dividends */}
+      {/* Right Column - Trade Ideas & Market Sentiment */}
       <div className="space-y-4">
         <TradeIdeas ideas={marketData?.tradeIdeas || []} />
-        <DividendDatesNew dividends={marketData?.dividends || []} />
         <MarketSentiment sentiment={marketData?.marketSentiment} />
       </div>
     </div>
