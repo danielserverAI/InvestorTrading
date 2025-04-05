@@ -4,12 +4,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { CalendarIcon, ArrowRightIcon, TrendingUpIcon, DollarSignIcon, BarChart3Icon, BuildingIcon, LandmarkIcon, GlobeIcon } from 'lucide-react';
-import { EarningsEvent, DividendEvent } from '@/lib/types';
+import { EarningsEvent, DividendEvent, EconomicEvent } from '@/lib/types';
 
 interface CalendarEventsProps {
   earnings: EarningsEvent[];
   dividends: DividendEvent[];
-  economic: EconomicEvent[];
+  economic?: EconomicEvent[];
 }
 
 type EventType = 'earnings' | 'ex-dividend' | 'payment' | 'economic' | 'fed' | 'treasury' | 'geopolitical';
@@ -24,21 +24,25 @@ interface CalendarEvent {
     estimatedEPS?: number;
     beforeMarket?: boolean;
     amount?: number;
+    importance?: string;
+    description?: string;
+    previousValue?: number;
+    forecast?: number;
   };
 }
 
-const CalendarEvents = ({ earnings, dividends }: CalendarEventsProps) => {
+const CalendarEvents = ({ earnings, dividends, economic = [] }: CalendarEventsProps) => {
   const [activeTab, setActiveTab] = useState('upcoming');
-  
+
   // Convert earnings and dividends to unified calendar events
   const calendarEvents = useMemo(() => {
     const events: CalendarEvent[] = [];
-    
+
     // Add earnings events
     earnings.forEach(earning => {
       // Convert string date to Date object
       const reportDate = new Date(earning.reportDate);
-      
+
       events.push({
         date: reportDate,
         symbol: earning.symbol,
@@ -51,12 +55,12 @@ const CalendarEvents = ({ earnings, dividends }: CalendarEventsProps) => {
         }
       });
     });
-    
+
     // Add dividend ex-dates
     dividends.forEach(dividend => {
       if (dividend.exDividendDate) {
         const exDate = new Date(dividend.exDividendDate);
-        
+
         events.push({
           date: exDate,
           symbol: dividend.symbol,
@@ -68,11 +72,11 @@ const CalendarEvents = ({ earnings, dividends }: CalendarEventsProps) => {
           }
         });
       }
-      
+
       // Add dividend payment dates
       if (dividend.paymentDate) {
         const paymentDate = new Date(dividend.paymentDate);
-        
+
         events.push({
           date: paymentDate,
           symbol: dividend.symbol,
@@ -85,12 +89,12 @@ const CalendarEvents = ({ earnings, dividends }: CalendarEventsProps) => {
         });
       }
     });
-    
+
     // Sort events by date
     // Add economic events
     economic.forEach(event => {
       const eventDate = new Date(event.date);
-      
+
       events.push({
         date: eventDate,
         symbol: event.category.toUpperCase(),
@@ -108,20 +112,20 @@ const CalendarEvents = ({ earnings, dividends }: CalendarEventsProps) => {
 
     return events.sort((a, b) => a.date.getTime() - b.date.getTime());
   }, [earnings, dividends, economic]);
-  
+
   // Group events by date
   const eventsByDate = useMemo(() => {
     const grouped: Record<string, CalendarEvent[]> = {};
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    
+
     const twoWeeksFromNow = addDays(today, 14);
-    
+
     const relevantEvents = activeTab === 'upcoming' 
       ? calendarEvents.filter(event => 
           !isBefore(event.date, today) && !isAfter(event.date, twoWeeksFromNow))
       : calendarEvents;
-      
+
     relevantEvents.forEach(event => {
       const dateKey = format(event.date, 'yyyy-MM-dd');
       if (!grouped[dateKey]) {
@@ -129,17 +133,17 @@ const CalendarEvents = ({ earnings, dividends }: CalendarEventsProps) => {
       }
       grouped[dateKey].push(event);
     });
-    
+
     return grouped;
   }, [calendarEvents, activeTab]);
-  
+
   // Helper functions
   const formatDate = (date: Date): string => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    
+
     const tomorrow = addDays(today, 1);
-    
+
     if (isSameDay(date, today)) {
       return 'Today';
     } else if (isSameDay(date, tomorrow)) {
@@ -148,11 +152,11 @@ const CalendarEvents = ({ earnings, dividends }: CalendarEventsProps) => {
       return format(date, 'EEE, MMM d');
     }
   };
-  
+
   const formatFullDate = (date: Date): string => {
     return format(date, 'EEEE, MMMM d, yyyy');
   };
-  
+
   const getEventBadgeClass = (type: EventType): string => {
     switch (type) {
       case 'earnings':
@@ -173,7 +177,7 @@ const CalendarEvents = ({ earnings, dividends }: CalendarEventsProps) => {
         return 'bg-gray-500 hover:bg-gray-600';
     }
   };
-  
+
   const formatEventType = (type: EventType): string => {
     switch (type) {
       case 'earnings':
@@ -186,7 +190,7 @@ const CalendarEvents = ({ earnings, dividends }: CalendarEventsProps) => {
         return type;
     }
   };
-  
+
   const getCategoryClass = (category: string): string => {
     switch (category.toLowerCase()) {
       case 'portfolio':
@@ -201,7 +205,7 @@ const CalendarEvents = ({ earnings, dividends }: CalendarEventsProps) => {
         return 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300';
     }
   };
-  
+
   const getEventIcon = (type: EventType) => {
     switch (type) {
       case 'earnings':
@@ -222,7 +226,7 @@ const CalendarEvents = ({ earnings, dividends }: CalendarEventsProps) => {
         return null;
     }
   };
-  
+
   return (
     <Card className="ios-card">
       <CardHeader className="pb-3">
@@ -277,14 +281,14 @@ const CalendarEvents = ({ earnings, dividends }: CalendarEventsProps) => {
                             </Badge>
                           )}
                         </div>
-                        
+
                         <div className="mt-2">
                           <div className="font-semibold text-base flex items-center">
                             {event.symbol} 
                             <ArrowRightIcon className="h-3 w-3 mx-1" /> 
                             {event.name}
                           </div>
-                          
+
                           {event.type === 'earnings' && (
                             <div className="mt-1 text-sm text-muted-foreground">
                               {event.details?.estimatedEPS ? (
@@ -294,13 +298,22 @@ const CalendarEvents = ({ earnings, dividends }: CalendarEventsProps) => {
                               )}
                             </div>
                           )}
-                          
+
                           {(event.type === 'ex-dividend' || event.type === 'payment') && (
                             <div className="mt-1 text-sm text-muted-foreground">
                               {event.details?.amount ? (
                                 <span>Amount: ${event.details.amount.toFixed(2)}</span>
                               ) : (
                                 <span>Amount not available</span>
+                              )}
+                            </div>
+                          )}
+                          {event.type === 'economic' && (
+                            <div className="mt-1 text-sm text-muted-foreground">
+                              {event.details?.description ? (
+                                <span>Description: {event.details.description}</span>
+                              ) : (
+                                <span>No description available</span>
                               )}
                             </div>
                           )}
