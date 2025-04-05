@@ -10,7 +10,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 interface HeaderProps {
   activeView: string;
@@ -21,7 +21,7 @@ const Header = ({ activeView, setActiveView }: HeaderProps) => {
   const { theme, toggleTheme } = useTheme();
   const { user, logout } = useUser();
   const { toast } = useToast();
-  
+
   const handleLogout = () => {
     logout();
     toast({
@@ -44,7 +44,7 @@ const Header = ({ activeView, setActiveView }: HeaderProps) => {
           </svg>
           <h1 className="ios-header hidden sm:block">Trader's Daily Intel</h1>
         </div>
-        
+
         {/* App Navigation */}
         <div className="absolute left-1/2 transform -translate-x-1/2 hidden md:block">
           <div className="flex bg-neutral-100 dark:bg-neutral-800 rounded-full p-1">
@@ -78,7 +78,7 @@ const Header = ({ activeView, setActiveView }: HeaderProps) => {
             </Button>
           </div>
         </div>
-        
+
         {/* User Controls */}
         <div className="flex items-center space-x-2">
           <Button 
@@ -94,7 +94,7 @@ const Header = ({ activeView, setActiveView }: HeaderProps) => {
               <Moon className="h-5 w-5" />
             )}
           </Button>
-          
+
           <Button 
             variant="ghost" 
             size="icon" 
@@ -104,7 +104,7 @@ const Header = ({ activeView, setActiveView }: HeaderProps) => {
             <Bell className="h-5 w-5" />
             <span className="absolute top-2 right-2 h-2.5 w-2.5 rounded-full bg-red-500"></span>
           </Button>
-          
+
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button 
@@ -113,6 +113,7 @@ const Header = ({ activeView, setActiveView }: HeaderProps) => {
                 className="rounded-full overflow-hidden w-10 h-10 flex items-center justify-center"
               >
                 <Avatar className="h-8 w-8 border-2 border-white dark:border-neutral-800">
+                  <AvatarImage src="https://api.dicebear.com/7.x/avataaars/svg?seed=trader" />
                   <AvatarFallback className="bg-primary-500 text-white">
                     {user ? getUserInitials(user.username) : "U"}
                   </AvatarFallback>
