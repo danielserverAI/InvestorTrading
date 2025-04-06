@@ -42,7 +42,7 @@ const Onboarding = () => {
       await createUser(formData);
       toast({
         title: "Profile created!",
-        description: "Welcome to Trader's Daily Intel.",
+        description: "Welcome to the Trader's Daily Intel.",
       });
       setLocation("/");
     } catch (error) {
