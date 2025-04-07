@@ -1,14 +1,15 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useLocation } from "wouter";
 import Header from "@/components/layout/header";
 import MobileNavigation from "@/components/layout/mobile-navigation";
 import Dashboard from "@/components/dashboard/index";
 import { useUser } from "@/context/user-context";
+import { useCurrentView } from "@/hooks/use-current-view";
 
 const Home = () => {
   const [, setLocation] = useLocation();
   const { user, isLoading } = useUser();
-  const [activeView, setActiveView] = useState("morning");
+  const { activeView, setActiveView } = useCurrentView();
 
   useEffect(() => {
     // If user is not logged in and not loading, redirect to onboarding

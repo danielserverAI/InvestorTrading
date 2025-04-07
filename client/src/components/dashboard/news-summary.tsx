@@ -1,9 +1,42 @@
-import { useState, useCallback } from "react";
+import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { News } from "@/lib/types";
 import { Button } from "@/components/ui/button";
-import { ChevronRight, Check, BrainCircuit } from "lucide-react";
+import { 
+  ChevronRight, 
+  Check, 
+  BrainCircuit,
+  Zap,
+  AlertTriangle,
+  CheckCircle,
+  XCircle,
+  Eye,
+  Star,
+  StarOff,
+  Loader2
+} from "lucide-react";
 import { useSwipeable } from "react-swipeable";
+import NewsDetail from "./news-detail";
+import { useNews } from "@/hooks/use-news";
+import { useLocation } from "wouter";
+
+// Function to get classification icon
+const getClassificationIcon = (classification: string | undefined) => {
+  switch (classification) {
+    case 'Catalyst':
+      return <Zap className="h-4 w-4 text-amber-500" />;
+    case 'Warning':
+      return <AlertTriangle className="h-4 w-4 text-red-500" />;
+    case 'Confirmation':
+      return <CheckCircle className="h-4 w-4 text-green-500" />;
+    case 'Noise':
+      return <XCircle className="h-4 w-4 text-neutral-500" />;
+    case 'Follow-up':
+      return <Eye className="h-4 w-4 text-blue-500" />;
+    default:
+      return null;
+  }
+};
 
 // SwipeableNewsItem component to properly handle hooks
 const SwipeableNewsItem = ({ 
@@ -11,25 +44,22 @@ const SwipeableNewsItem = ({
   categoryStyles, 
   showAIAnalysis, 
   onToggleAnalysis, 
-  onMarkAsRead 
+  onMarkAsRead,
+  onFollow
 }: { 
   item: News; 
   categoryStyles: {indicator: string; badge: string;}; 
   showAIAnalysis: boolean;
   onToggleAnalysis: () => void;
   onMarkAsRead: () => void;
+  onFollow: (follow: boolean) => void;
 }) => {
-  // Analyze this news item's importance to user (this would be powered by OpenAI in production)
-  const getAIAnalysis = () => {
-    if (item.category === 'portfolio') {
-      return "This news directly impacts stocks in your portfolio. Apple's AI features may drive stock price movement in the coming weeks as investors evaluate their technological edge.";
-    } else if (item.category === 'watchlist') {
-      return "This company is on your watchlist. Recent developments suggest monitoring for potential entry points if price action confirms the news impact.";
-    } else if (item.importance > 7) {
-      return "This market-moving news could affect your portfolio's overall performance. The Fed's decisions on interest rates directly impact market sentiment and liquidity.";
-    } else {
-      return "This news may have indirect effects on market sectors you're invested in. Consider how changing market conditions might affect your current positions.";
-    }
+  const [isFollowing, setIsFollowing] = useState(item.followUp || false);
+  
+  const handleFollow = () => {
+    const newFollowState = !isFollowing;
+    setIsFollowing(newFollowState);
+    onFollow(newFollowState);
   };
   
   // Configure swipe handlers
@@ -77,8 +107,21 @@ const SwipeableNewsItem = ({
             {item.content}
           </p>
           
+          {/* Classification indicator */}
+          {item.classification && (
+            <div className="mt-2 flex items-center">
+              {getClassificationIcon(item.classification)}
+              <span className="ml-1 text-xs font-medium">
+                {item.classification}
+                {item.impact && (
+                  <span className="ml-1">• {item.impact}</span>
+                )}
+              </span>
+            </div>
+          )}
+          
           {/* AI Analysis (conditionally shown) */}
-          {showAIAnalysis && (
+          {showAIAnalysis && item.whyThisMatters && (
             <div className="mt-3 p-3 rounded-lg bg-green-50 dark:bg-green-900/40 border border-green-100 dark:border-green-800">
               <div className="flex items-center mb-1">
                 <BrainCircuit className="h-4 w-4 text-green-600 dark:text-green-400 mr-1.5" />
@@ -87,7 +130,7 @@ const SwipeableNewsItem = ({
                 </span>
               </div>
               <p className="text-sm text-green-700 dark:text-green-300">
-                {getAIAnalysis()}
+                {item.whyThisMatters}
               </p>
             </div>
           )}
@@ -115,6 +158,29 @@ const SwipeableNewsItem = ({
             <Button 
               variant="outline" 
               size="sm" 
+              onClick={handleFollow}
+              className={`h-7 px-3 rounded-full text-xs ${
+                isFollowing
+                  ? "bg-amber-100 dark:bg-amber-900 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800"
+                  : ""
+              }`}
+            >
+              {isFollowing ? (
+                <>
+                  <Star className="h-3.5 w-3.5 mr-1 text-amber-500" /> 
+                  Following
+                </>
+              ) : (
+                <>
+                  <StarOff className="h-3.5 w-3.5 mr-1" /> 
+                  Follow
+                </>
+              )}
+            </Button>
+            
+            <Button 
+              variant="outline" 
+              size="sm" 
               onClick={onMarkAsRead}
               className="h-7 px-3 rounded-full text-xs"
             >
@@ -129,7 +195,7 @@ const SwipeableNewsItem = ({
 };
 
 interface NewsSummaryProps {
-  news: News[];
+  news?: News[];
 }
 
 // Helper function to format time ago
@@ -192,38 +258,70 @@ const getCategoryStyles = (category: string, importance: number) => {
   };
 };
 
-const NewsSummary = ({ news }: NewsSummaryProps) => {
-  const [selectedCategory, setSelectedCategory] = useState<string>("all");
-  const [readNewsIds, setReadNewsIds] = useState<Set<number>>(new Set());
+const NewsSummary = ({ news: initialNews }: NewsSummaryProps) => {
+  const [selectedNewsId, setSelectedNewsId] = useState<number | null>(null);
   const [showAIAnalysis, setShowAIAnalysis] = useState<number | null>(null);
+  const [, navigate] = useLocation();
   
-  // Group news by category
-  const macroNews = news.filter(item => item.category === 'macro');
-  const portfolioNews = news.filter(item => item.category === 'portfolio');
-  const watchlistNews = news.filter(item => item.category === 'watchlist');
-  
-  // Filter news based on selected category and remove read news
-  const filteredNews = selectedCategory === "all" 
-    ? news.filter(item => !readNewsIds.has(item.id))
-    : news.filter(item => item.category === selectedCategory && !readNewsIds.has(item.id));
-    
-  // Handle marking news as read
-  const markAsRead = (newsId: number) => {
-    setReadNewsIds(prev => {
-      const newSet = new Set(prev);
-      newSet.add(newsId);
-      return newSet;
-    });
-    // Close AI analysis if it was open for this news
-    if (showAIAnalysis === newsId) {
-      setShowAIAnalysis(null);
-    }
-  };
+  // Use the news hook
+  const { 
+    news,
+    filteredNews,
+    loading, 
+    error, 
+    category, 
+    setCategory, 
+    markAsRead, 
+    toggleFollowTopic 
+  } = useNews();
   
   // Handle showing AI analysis for a news item
   const toggleAIAnalysis = (newsId: number) => {
     setShowAIAnalysis(prev => prev === newsId ? null : newsId);
   };
+  
+  // Handle viewing detailed news
+  const viewNewsDetail = (newsId: number) => {
+    setSelectedNewsId(newsId);
+  };
+  
+  // Handle back from detail view
+  const handleBackFromDetail = () => {
+    setSelectedNewsId(null);
+  };
+
+  // Show loading state
+  if (loading && news.length === 0) {
+    return (
+      <Card className="ios-card overflow-hidden mb-4">
+        <div className="p-5 text-center">
+          <h2 className="ios-header mb-4">Today's News</h2>
+          <Loader2 className="h-8 w-8 mx-auto animate-spin text-primary" />
+          <p className="text-sm text-neutral-500 mt-2">Loading news...</p>
+        </div>
+      </Card>
+    );
+  }
+  
+  // Show error state
+  if (error && news.length === 0) {
+    return (
+      <Card className="ios-card overflow-hidden mb-4">
+        <div className="p-5 text-center">
+          <h2 className="ios-header mb-1">Today's News</h2>
+          <p className="text-sm text-red-500">{error}</p>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="mt-2"
+            onClick={() => window.location.reload()}
+          >
+            Try Again
+          </Button>
+        </div>
+      </Card>
+    );
+  }
 
   if (news.length === 0) {
     return (
@@ -234,6 +332,24 @@ const NewsSummary = ({ news }: NewsSummaryProps) => {
         </div>
       </Card>
     );
+  }
+  
+  // If a news item is selected, show its detail view
+  if (selectedNewsId !== null) {
+    const selectedNews = news.find(item => item.id === selectedNewsId);
+    if (selectedNews) {
+      return (
+        <NewsDetail 
+          newsItem={selectedNews} 
+          onBack={handleBackFromDetail}
+          onMarkRead={(id) => {
+            markAsRead(id);
+            handleBackFromDetail();
+          }}
+          onFollow={toggleFollowTopic}
+        />
+      );
+    }
   }
 
   // Sort news by importance and recency
@@ -248,118 +364,102 @@ const NewsSummary = ({ news }: NewsSummaryProps) => {
 
   return (
     <Card className="ios-card overflow-hidden mb-4">
-      <div className="p-4 pb-0">
-        <div className="flex items-center justify-between mb-2">
-          <h2 className="ios-header">Today's News</h2>
-          <Button variant="ghost" size="sm" className="text-primary-500 font-medium rounded-full -mr-2">
-            See All <ChevronRight className="h-3.5 w-3.5 ml-0.5" />
-          </Button>
-        </div>
-        
-        {/* Category Tabs - iOS Style */}
-        <div className="mb-3 -mx-1 flex overflow-auto no-scrollbar">
-          <Button 
+      <div className="p-4 border-b border-neutral-200 dark:border-neutral-800 flex items-center justify-between">
+        <h2 className="ios-header">Today's News</h2>
+        <Button 
+          variant="ghost" 
+          size="sm" 
+          className="h-8 text-sm text-primary"
+          onClick={() => navigate("/news")}
+        >
+          See All <ChevronRight className="h-4 w-4 ml-1" />
+        </Button>
+      </div>
+      
+      {/* Category filter tabs */}
+      <div className="border-b border-neutral-200 dark:border-neutral-800 overflow-x-auto">
+        <div className="flex px-4">
+          <Button
             variant="ghost"
             size="sm"
-            onClick={() => setSelectedCategory("all")}
-            className={`whitespace-nowrap rounded-full mr-1 px-4 ${
-              selectedCategory === "all" 
-                ? "bg-primary-100 dark:bg-primary-900 text-primary-700 dark:text-primary-300 font-medium" 
-                : "text-neutral-500"
-            }`}
+            className={`rounded-none border-b-2 ${
+              category === "all"
+                ? "border-primary text-primary"
+                : "border-transparent text-neutral-500"
+            } px-3 py-2 text-sm font-medium`}
+            onClick={() => setCategory("all")}
           >
             All News
           </Button>
-          {macroNews.length > 0 && (
-            <Button 
-              variant="ghost"
-              size="sm"
-              onClick={() => setSelectedCategory("macro")}
-              className={`whitespace-nowrap rounded-full mr-1 px-4 ${
-                selectedCategory === "macro" 
-                  ? "bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300 font-medium" 
-                  : "text-neutral-500"
-              }`}
-            >
-              Market News
-            </Button>
-          )}
-          {portfolioNews.length > 0 && (
-            <Button 
-              variant="ghost"
-              size="sm"
-              onClick={() => setSelectedCategory("portfolio")}
-              className={`whitespace-nowrap rounded-full mr-1 px-4 ${
-                selectedCategory === "portfolio" 
-                  ? "bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 font-medium" 
-                  : "text-neutral-500"
-              }`}
-            >
-              Your Portfolio
-            </Button>
-          )}
-          {watchlistNews.length > 0 && (
-            <Button 
-              variant="ghost"
-              size="sm"
-              onClick={() => setSelectedCategory("watchlist")}
-              className={`whitespace-nowrap rounded-full mr-1 px-4 ${
-                selectedCategory === "watchlist" 
-                  ? "bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300 font-medium" 
-                  : "text-neutral-500"
-              }`}
-            >
-              Your Watchlist
-            </Button>
-          )}
+          
+          <Button
+            variant="ghost"
+            size="sm"
+            className={`rounded-none border-b-2 ${
+              category === "macro"
+                ? "border-primary text-primary"
+                : "border-transparent text-neutral-500"
+            } px-3 py-2 text-sm font-medium`}
+            onClick={() => setCategory("macro")}
+          >
+            Market News
+          </Button>
+          
+          <Button
+            variant="ghost"
+            size="sm"
+            className={`rounded-none border-b-2 ${
+              category === "portfolio"
+                ? "border-primary text-primary"
+                : "border-transparent text-neutral-500"
+            } px-3 py-2 text-sm font-medium`}
+            onClick={() => setCategory("portfolio")}
+          >
+            Your Portfolio
+          </Button>
+          
+          <Button
+            variant="ghost"
+            size="sm"
+            className={`rounded-none border-b-2 ${
+              category === "watchlist"
+                ? "border-primary text-primary"
+                : "border-transparent text-neutral-500"
+            } px-3 py-2 text-sm font-medium`}
+            onClick={() => setCategory("watchlist")}
+          >
+            Your Watchlist
+          </Button>
         </div>
       </div>
       
-      {/* News Items */}
-      <div className="px-1">
-        {sortedNews.map((item, index) => {
-          // Determine category styling
-          const categoryStyles = getCategoryStyles(item.category, item.importance);
-          
-          return (
-            <div 
-              key={index} 
-              className="mx-3 py-4 border-t border-neutral-200 dark:border-neutral-800"
-            >
+      {/* News list */}
+      <div className="px-4 py-2 divide-y divide-neutral-100 dark:divide-neutral-800">
+        {sortedNews.length === 0 ? (
+          <div className="py-6 text-center">
+            <p className="text-sm text-neutral-500">
+              No {category !== "all" ? getCategoryLabel(category).toLowerCase() : ""} news available.
+            </p>
+          </div>
+        ) : (
+          sortedNews.map(item => (
+            <div key={item.id} className="py-4" onClick={() => viewNewsDetail(item.id)}>
               <SwipeableNewsItem
                 item={item}
-                categoryStyles={categoryStyles}
+                categoryStyles={getCategoryStyles(item.category, item.importance)}
                 showAIAnalysis={showAIAnalysis === item.id}
                 onToggleAnalysis={() => toggleAIAnalysis(item.id)}
                 onMarkAsRead={() => markAsRead(item.id)}
+                onFollow={(follow) => toggleFollowTopic(item.id, follow)}
               />
             </div>
-          );
-        })}
-        
-        {sortedNews.length === 0 && (
-          <div className="p-6 text-center">
-            <p className="text-sm text-neutral-500 mb-2">You're all caught up!</p>
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={() => setReadNewsIds(new Set())}
-              className="rounded-full text-xs"
-            >
-              Show All News
-            </Button>
-          </div>
+          ))
         )}
         
-        {sortedNews.length > 0 && (
-          <div className="border-t border-neutral-200 dark:border-neutral-800 p-4 text-center">
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              className="text-primary-500 font-medium w-full rounded-full"
-            >
-              See More News
-            </Button>
+        {/* Loading more indicator if needed */}
+        {loading && news.length > 0 && (
+          <div className="py-4 text-center">
+            <Loader2 className="h-5 w-5 mx-auto animate-spin text-neutral-400" />
           </div>
         )}
       </div>

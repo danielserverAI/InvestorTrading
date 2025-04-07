@@ -6,12 +6,14 @@ import { UserProvider } from "./context/user-context";
 import NotFound from "@/pages/not-found";
 import Home from "@/pages/home";
 import Onboarding from "@/pages/onboarding";
+import NewsPage from "@/pages/news";
 
 function Router() {
   return (
     <Switch>
       <Route path="/" component={Home} />
       <Route path="/onboarding" component={Onboarding} />
+      <Route path="/news" component={NewsPage} />
       <Route component={NotFound} />
     </Switch>
   );

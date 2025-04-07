@@ -9,7 +9,7 @@ import { fromZodError } from "zod-validation-error";
 import { DEFAULT_SAMPLE_MARKET_DATA } from "../client/src/lib/constants";
 
 // Sample market data for different times of day
-const sampleMarketData = {
+export const sampleMarketData = {
   morning: {
     marketSummary: DEFAULT_SAMPLE_MARKET_DATA.marketSummary,
     news: [
@@ -441,6 +441,115 @@ export async function registerRoutes(app: Express): Promise<Server> {
     
     return res.status(400).json({ message: "Invalid view parameter" });
   });
+
+  // News API routes
+  app.get("/api/news", async (req: Request, res: Response) => {
+    const category = req.query.category as string || 'all';
+    const userId = 1; // In a real app, get this from the authenticated user
+    
+    try {
+      // In a real app, get news from a database or external API
+      // For demo, return the sample news data
+      const allNews = sampleMarketData.morning.news;
+      
+      let filteredNews;
+      if (category === 'all') {
+        filteredNews = allNews;
+      } else {
+        filteredNews = allNews.filter(news => news.category === category);
+      }
+      
+      // Add the intelligent categorization info
+      const processedNews = filteredNews.map(news => {
+        // In production, this would be done by the LLM
+        const classification = getNewsClassification(news);
+        return {
+          ...news,
+          classification: classification.classification,
+          impact: classification.impact,
+          whyThisMatters: classification.whyThisMatters,
+          followUp: classification.followUp,
+          isRead: false // In production, this would be fetched from user data
+        };
+      });
+      
+      res.json(processedNews);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch news" });
+    }
+  });
+
+  app.patch("/api/news/:id/read", async (req: Request, res: Response) => {
+    const newsId = parseInt(req.params.id);
+    const userId = 1; // In a real app, get this from the authenticated user
+    
+    try {
+      // In a real app, update the database
+      // For demo, just return success
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to mark news as read" });
+    }
+  });
+
+  app.patch("/api/news/:id/follow", async (req: Request, res: Response) => {
+    const newsId = parseInt(req.params.id);
+    const userId = 1; // In a real app, get this from the authenticated user
+    const { follow } = req.body;
+    
+    try {
+      // In a real app, update the database
+      // For demo, just return success
+      res.json({ success: true, following: follow });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to update follow status" });
+    }
+  });
+
+  // Helper function to simulate LLM categorization
+  function getNewsClassification(news: any) {
+    // In production, this would be an actual call to an LLM
+    
+    // Simulate different classifications based on the news category and content
+    if (news.category === 'portfolio') {
+      if (news.title.includes('AI')) {
+        return {
+          classification: 'Catalyst',
+          impact: 'Positive',
+          whyThisMatters: "This AI development directly impacts your holdings. The company's strategic position could strengthen, potentially driving stock price growth.",
+          followUp: true
+        };
+      } else {
+        return {
+          classification: 'Confirmation',
+          impact: 'Positive',
+          whyThisMatters: "This news confirms the positive trend for one of your portfolio holdings. It aligns with the investment thesis you're following.",
+          followUp: false
+        };
+      }
+    } else if (news.category === 'watchlist') {
+      return {
+        classification: 'Warning',
+        impact: 'Volatile',
+        whyThisMatters: "This development could create volatility for a stock on your watchlist. Monitor how the market reacts before considering a position.",
+        followUp: true
+      };
+    } else if (news.importance > 7) {
+      return {
+        classification: 'Catalyst',
+        impact: 'Neutral',
+        whyThisMatters: "This major market news could affect overall market sentiment. While not directly impacting your holdings, it's worth monitoring broader effects.",
+        followUp: false
+      };
+    } else {
+      return {
+        classification: 'Noise',
+        impact: 'Neutral',
+        whyThisMatters: "This news is unlikely to impact your current investment strategy. No immediate action needed.",
+        followUp: false
+      };
+    }
+  }
 
   // Create HTTP server
   const httpServer = createServer(app);

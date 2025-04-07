@@ -36,6 +36,13 @@ export interface News {
   publishedAt: string;
   category: string; // macro, portfolio, watchlist, interest
   importance: number;
+  // New fields for Intelligent News Engine
+  classification?: 'Catalyst' | 'Warning' | 'Confirmation' | 'Noise' | 'Follow-up';
+  impact?: 'Positive' | 'Negative' | 'Neutral' | 'Volatile';
+  whyThisMatters?: string;
+  followUp?: boolean;
+  isRead?: boolean;
+  relatedTickers?: string[];
 }
 
 // Earnings types

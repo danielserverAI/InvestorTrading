@@ -9,6 +9,9 @@ import {
   MarketSentiment, InsertMarketSentiment
 } from "@shared/schema";
 
+// Import sampleMarketData
+import { sampleMarketData } from './routes';
+
 // Interface to define all storage operations
 export interface IStorage {
   // User methods
@@ -359,3 +362,45 @@ interface MarketData {
   economicEvents: EconomicEvent[];
   marketSentiment: any;
 }
+
+// Add news related storage functions
+export const newsStorage = {
+  // Store processed news items
+  async storeProcessedNews(news: any[]) {
+    // In a real implementation, this would store to database
+    // For demo purposes, we'll just return the news
+    return news;
+  },
+  
+  // Get news by category
+  async getNewsByCategory(category: string) {
+    // In a real implementation, this would query from database
+    // For demo purposes, we'll just filter the sample data
+    const allNews = await this.getAllNews();
+    if (category === 'all') {
+      return allNews;
+    }
+    return allNews.filter(news => news.category === category);
+  },
+  
+  // Get all news
+  async getAllNews() {
+    // In a real implementation, this would query from database
+    // For demo purposes, we'll return sample data
+    return sampleMarketData.morning.news;
+  },
+  
+  // Mark news as read
+  async markNewsAsRead(newsId: number, userId: number) {
+    // In a real implementation, this would update database
+    // For demo purposes, we'll just return success
+    return { success: true };
+  },
+  
+  // Toggle follow news topic
+  async toggleFollowTopic(newsId: number, userId: number, follow: boolean) {
+    // In a real implementation, this would update database
+    // For demo purposes, we'll just return success
+    return { success: true, following: follow };
+  }
+};
