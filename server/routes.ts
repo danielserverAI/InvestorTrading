@@ -5,6 +5,7 @@ import { insertUserSchema } from "@shared/schema";
 import { z } from "zod";
 import { ZodError } from "zod";
 import { fromZodError } from "zod-validation-error";
+import { processMessage } from "./chat";
 
 import { DEFAULT_SAMPLE_MARKET_DATA } from "../client/src/lib/constants";
 
@@ -550,6 +551,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       };
     }
   }
+
+  // Chat endpoint
+  app.post("/api/chat", async (req: Request, res: Response) => {
+    try {
+      const { content, agent, tab } = req.body;
+      const response = await processMessage(content, agent, tab);
+      res.json({ success: true, response });
+    } catch (error) {
+      console.error("Chat processing error:", error);
+      res.status(400).json({ 
+        success: false, 
+        error: error instanceof Error ? error.message : "Unknown error" 
+      });
+    }
+  });
 
   // Create HTTP server
   const httpServer = createServer(app);

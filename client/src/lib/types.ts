@@ -97,6 +97,16 @@ export interface MarketSummaryData {
   changePercent: number;
 }
 
+// Economic event types
+export interface EconomicEvent {
+  title: string;
+  date: string;
+  impact: 'high' | 'medium' | 'low';
+  forecast?: string;
+  previous?: string;
+  actual?: string;
+}
+
 // Market data types
 export interface MarketData {
   news: News[];
@@ -104,6 +114,7 @@ export interface MarketData {
   upcomingEarnings: EarningsEvent[];
   tradeIdeas: TradeIdea[];
   dividends: DividendEvent[];
+  economicEvents: EconomicEvent[];
   marketSentiment: MarketSentimentData;
   marketSummary: MarketSummaryData[];
 }
