@@ -92,10 +92,14 @@ export const ChatContainer = () => {
 
   return (
     <div className="flex h-full flex-col bg-background dark:bg-neutral-900">
-      <TabNavigation
+      {/* <TabNavigation
         activeTab={state.activeTab}
         onTabChange={handleTabChange}
-      />
+      /> */}
+      {/* Add Title Header */}
+      <div className="p-3 border-b border-neutral-200 dark:border-neutral-800">
+        <h2 className="text-base font-semibold text-neutral-800 dark:text-neutral-200">AI Assistant</h2>
+      </div>
       <MessageArea messages={state.messages} />
       <InputBar
         onSend={handleSendMessage}

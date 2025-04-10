@@ -245,7 +245,7 @@ export const TradingViewChart = ({
         baselineSeriesRef.current = chartRef.current.addBaselineSeries({
           ...commonSeriesOptions,
           priceFormat: priceFormat,
-          baseValue: { type: 'price', price: singleValueData.length > 0 ? singleValueData[0].value : 0 },
+          baseValue: { type: 'price', price: singleValueData[0].value },
           topLineColor: 'rgba(38, 166, 154, 1)',
           topFillColor1: 'rgba(38, 166, 154, 0.28)',
           topFillColor2: 'rgba(38, 166, 154, 0.05)',
@@ -275,6 +275,23 @@ export const TradingViewChart = ({
     // IMPORTANT: Apply existing markers to the newly created series
     const currentActiveSeries = getActiveSeries();
     if (currentActiveSeries) {
+        // Ensure data is set before applying price scale options
+        if (chartType === 'candles') {
+          (currentActiveSeries as ISeriesApi<'Candlestick'>).setData(chartData as CandlestickData<Time>[]);
+        } else if (chartType === 'bars') {
+          (currentActiveSeries as ISeriesApi<'Bar'>).setData(chartData as BarData<Time>[]);
+        } else {
+          (currentActiveSeries as ISeriesApi<'Line' | 'Area' | 'Baseline'>).setData(singleValueData);
+        }
+
+        // Apply ZERO margins AFTER setting data
+        currentActiveSeries.priceScale().applyOptions({
+            scaleMargins: {
+                top: 0,
+                bottom: 0,
+            },
+        });
+
         console.log("Applying initial markers to new series:", markers);
         currentActiveSeries.setMarkers(markers);
     }
@@ -293,13 +310,13 @@ export const TradingViewChart = ({
     const crosshairLabelBgColor = isDarkMode ? '#404040' : '#e5e5e5';
     const watermarkColor = isDarkMode ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)';
 
-    const chart = createChart(chartContainerRef.current, {
-      layout: {
-        background: { color: 'transparent' },
+      const chart = createChart(chartContainerRef.current, {
+        layout: {
+          background: { color: 'transparent' },
         textColor: textColor, 
         attributionLogo: false,
-      },
-      grid: {
+        },
+        grid: {
         vertLines: { color: gridColor },
         horzLines: { color: gridColor },
       },
@@ -343,17 +360,17 @@ export const TradingViewChart = ({
         mode: 0, alignLabels: true, ticksVisible: true,
       },
     });
-    chartRef.current = chart;
+      chartRef.current = chart;
 
-    const handleResize = () => {
+      const handleResize = () => {
       if (chartContainerRef.current && chartRef.current) {
         chartRef.current.applyOptions({ width: chartContainerRef.current.clientWidth, height: chartContainerRef.current.clientHeight });
       }
     };
-    window.addEventListener('resize', handleResize);
+      window.addEventListener('resize', handleResize);
 
-    return () => {
-      window.removeEventListener('resize', handleResize);
+      return () => {
+        window.removeEventListener('resize', handleResize);
       if (chartRef.current) {
         chartRef.current.remove();
         chartRef.current = null;
@@ -503,8 +520,11 @@ export const TradingViewChart = ({
   }, [selectedActionConfig]); // Depend only on action config
 
   return (
-    <div className="w-full h-[600px] relative">
-      <div ref={chartContainerRef} className="w-full h-full bg-transparent" /> 
+    <div className="w-full h-full relative"> 
+      <div 
+        ref={chartContainerRef}
+        className="w-full h-full bg-transparent min-h-[250px]" 
+      />
       
       <div className="absolute top-4 left-4 flex items-center gap-4 pointer-events-none"> 
         <div className="text-sm font-medium text-neutral-500 dark:text-neutral-400 bg-neutral-100/80 dark:bg-neutral-900/80 px-2 py-1 rounded">

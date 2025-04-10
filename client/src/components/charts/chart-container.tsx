@@ -4,9 +4,11 @@ import {
   CandlestickChart, BarChart3, LineChart, TrendingUp, Activity, 
   ArrowUp, ArrowDown, Circle, Square, Eraser // Add Eraser for delete
 } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react'; // Import LucideIcon type
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { TradingViewChart, MarkerConfig } from './trading-view-chart'; // Import MarkerConfig type
+// Removed Input import as it's commented out later
+// import { Input } from '@/components/ui/input'; 
+import { TradingViewChart, ActionConfig as BaseMarkerConfig } from './trading-view-chart'; // Import ActionConfig as BaseMarkerConfig
 import { cn } from '@/lib/utils';
 import {
   DropdownMenu,
@@ -22,7 +24,8 @@ export interface Stock {
   category: 'portfolio' | 'watchlist' | 'liked' | 'worth-considering';
 }
 
-interface ActionConfig extends Omit<Partial<MarkerConfig>, 'icon' | 'id'> { // Make marker parts optional
+// Use BaseMarkerConfig for Omit
+interface ActionConfig extends Omit<Partial<BaseMarkerConfig>, 'icon' | 'id'> { 
   id: string; // 'buy', 'sell', 'select', 'delete'
   label: string;
   icon: LucideIcon;
@@ -41,18 +44,19 @@ const actionOptions: ActionConfig[] = [
 interface ChartContainerProps {
   stocks: Stock[];
   initialCategory?: 'portfolio' | 'watchlist';
+  searchQuery?: string;
 }
 
 export const ChartContainer = ({ 
   stocks,
-  initialCategory = 'portfolio' 
+  initialCategory = 'portfolio',
+  searchQuery = ''
 }: ChartContainerProps) => {
   const [currentCategory, setCurrentCategory] = useState(initialCategory);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [currentInterval, setCurrentInterval] = useState('1D');
   const [chartType, setChartType] = useState<'candles' | 'line' | 'bars' | 'area' | 'baseline'>('candles');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedActionConfig, setSelectedActionConfig] = useState<ActionConfig>(actionOptions[0]); // Default to Select Points
+  const [selectedActionConfig, setSelectedActionConfig] = useState<ActionConfig>(actionOptions[0]);
   const intervals = ['1D', '1W', '1M', '1Y'];
 
   const filteredStocks = stocks.filter(stock => 
@@ -80,21 +84,16 @@ export const ChartContainer = ({
     setCurrentIndex((prevIndex) => (prevIndex - 1 + filteredStocks.length) % filteredStocks.length);
   };
 
-  const handleSearch = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setSearchQuery(event.target.value);
-    setCurrentIndex(0); // Reset index on search
-  };
-
   const toggleCategory = (category: 'portfolio' | 'watchlist') => {
     setCurrentCategory(category);
-    setSearchQuery('');
     setCurrentIndex(0);
   };
 
   return (
     <TooltipProvider> 
       <div className="flex flex-col w-full h-full bg-white dark:bg-neutral-950">
-        {/* Top Controls: Category, Search, Navigation */}
+        {/* Top Controls: Category, Search, Navigation - Commented out Category Buttons */}
+        {/* 
         <div className="flex items-center justify-between p-4 border-b dark:border-neutral-800">
           <div className="flex items-center space-x-2">
             <Button 
@@ -114,16 +113,8 @@ export const ChartContainer = ({
               Watchlist
             </Button>
           </div>
-          <div className="flex-1 max-w-xs mx-4">
-            <Input
-              type="search"
-              placeholder="Search..."
-              value={searchQuery}
-              onChange={handleSearch}
-              className="h-9 rounded-full bg-neutral-100 dark:bg-neutral-900 border-neutral-200 dark:border-neutral-800 focus-visible:ring-1 focus-visible:ring-neutral-400 dark:focus-visible:ring-neutral-600 text-xs sm:text-sm"
-            />
-          </div>
-          <div className="flex items-center space-x-1">
+          
+          <div className="flex items-center space-x-1 flex-shrink-0">
             <Button variant="ghost" size="icon" onClick={handlePrevious} disabled={filteredStocks.length <= 1} className="h-8 w-8">
               <ChevronLeft className="h-4 w-4" />
             </Button>
@@ -132,11 +123,31 @@ export const ChartContainer = ({
             </Button>
           </div>
         </div>
+        */}
         
         {/* Main Content: Chart and Controls */}
         <div className="flex-1 flex flex-col p-2 sm:p-4 overflow-hidden">
-          {/* Chart Controls Bar */}
-          <div className="flex items-center justify-between mb-2 sm:mb-4 flex-wrap gap-2">
+          
+          {/* Chart Area - Takes remaining space, clips overflow */}
+          <div className="relative flex-1 overflow-hidden">
+            {currentStock ? (
+              <TradingViewChart 
+                key={`${currentStock.symbol}-${currentInterval}`}
+                symbol={currentStock.symbol}
+                interval={currentInterval}
+                selectedActionConfig={selectedActionConfig}
+                chartType={chartType}
+                onKeyPointDetected={(point) => console.log('Key point selected:', point)}
+              />
+            ) : (
+              <div className="flex items-center justify-center h-full text-neutral-500">
+                {stocks.length === 0 ? 'No stocks available' : 'Select or search for a stock'}
+              </div>
+            )}
+          </div>
+
+          {/* Chart Controls Bar - Prevent shrinking */}
+          <div className="flex items-center justify-between mt-2 sm:mt-4 flex-wrap gap-2 flex-shrink-0">
             {/* Left Controls: Interval, Type */}
             <div className="flex items-center space-x-2 flex-wrap gap-1">
               <div className="flex space-x-1 bg-neutral-100 dark:bg-neutral-800 rounded-full p-1">
@@ -243,33 +254,17 @@ export const ChartContainer = ({
               </Tooltip>
             </div>
           </div>
-
-          {/* Chart Area */}
-          <div className="relative flex-1 min-h-[300px] sm:min-h-[400px]">
-            {currentStock ? (
-              <TradingViewChart 
-                key={`${currentStock.symbol}-${currentInterval}`}
-                symbol={currentStock.symbol}
-                interval={currentInterval}
-                selectedActionConfig={selectedActionConfig}
-                chartType={chartType}
-                onKeyPointDetected={(point) => console.log('Key point selected:', point)}
-              />
-            ) : (
-              <div className="flex items-center justify-center h-full text-neutral-500">
-                {stocks.length === 0 ? 'No stocks available' : 'Select or search for a stock'}
-              </div>
-            )}
-          </div>
         </div>
         
-        {/* Stock Details Footer (Optional) */}
+        {/* Stock Details Footer (Optional) - Commented out */}
+        {/* 
         {currentStock && (
           <div className="p-4 border-t dark:border-neutral-800 text-center">
             <h3 className="text-lg font-semibold">{currentStock.name} ({currentStock.symbol})</h3>
-            {/* Add more details if needed */}
+            
           </div>
         )}
+        */}
       </div>
     </TooltipProvider>
   );
