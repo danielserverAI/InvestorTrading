@@ -38,17 +38,45 @@ const Header = ({ activeView, setActiveView, onSearchChange }: HeaderProps) => {
   };
 
   return (
-    <header className="sticky top-0 z-50 bg-white/90 dark:bg-neutral-900/90 backdrop-blur-xl border-b border-neutral-200 dark:border-neutral-800 h-16">
-      <div className="container mx-auto px-4 h-full flex items-center justify-between">
-        {/* App Title */}
-        <div className="flex items-center space-x-2">
+    <header className="sticky top-0 z-50 bg-white/90 dark:bg-neutral-950/90 backdrop-blur-xl border-b border-neutral-200 dark:border-neutral-800/50 h-16">
+      <div className="container mx-auto px-4 h-full flex items-center justify-between gap-4">
+        {/* App Title/Logo - Visible medium and up */}
+        <div className="hidden md:flex items-center space-x-2 flex-shrink-0">
           <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-primary-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M22 12h-4l-3 9L9 3l-3 9H2"></path>
           </svg>
           <h1 className="ios-header hidden sm:block">Trader's Daily Intel</h1>
         </div>
 
-        {/* App Navigation - Replaced with Search Input */}
+        {/* Mobile Logo & Search Bar Wrapper - Visible small screens only */}
+        <div className="flex flex-1 items-center gap-2 md:hidden">
+          {/* Mobile Logo */}
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-primary-500 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M22 12h-4l-3 9L9 3l-3 9H2"></path>
+          </svg>
+          {/* Mobile Search Bar */}
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-neutral-400" />
+            <Input
+              type="search"
+              placeholder="Search stocks..."
+              value={searchQuery}
+              onChange={(e) => {
+                const query = e.target.value;
+                setSearchQuery(query);
+                onSearchChange?.(query);
+              }}
+              className="w-full h-9 pl-10 pr-4 py-2 rounded-full text-sm 
+                         bg-white/80 dark:bg-neutral-900/80 
+                         backdrop-blur-md 
+                         border border-white/20 dark:border-neutral-800/50 
+                         shadow-sm 
+                         focus:outline-none focus:ring-1 focus:ring-primary-500 dark:focus:ring-primary-400"
+            />
+          </div>
+        </div>
+
+        {/* Desktop Search Bar - Centered, hidden on small */}
         <div className="absolute left-1/2 transform -translate-x-1/2 hidden md:block flex-1 max-w-md">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-neutral-400" />
@@ -62,17 +90,17 @@ const Header = ({ activeView, setActiveView, onSearchChange }: HeaderProps) => {
                 onSearchChange?.(query);
               }}
               className="w-full h-9 pl-10 pr-4 py-2 rounded-full text-sm 
-                         bg-white/80 dark:bg-neutral-800/80 
+                         bg-white/80 dark:bg-neutral-900/80 
                          backdrop-blur-md 
-                         border border-white/20 dark:border-neutral-700/20 
+                         border border-white/20 dark:border-neutral-800/50 
                          shadow-sm 
                          focus:outline-none focus:ring-1 focus:ring-primary-500 dark:focus:ring-primary-400"
             />
           </div>
         </div>
 
-        {/* User Controls */}
-        <div className="flex items-center space-x-2">
+        {/* User Controls - Keep flex-shrink-0 */}
+        <div className="flex items-center space-x-2 flex-shrink-0">
           <Button 
             variant="ghost" 
             size="icon" 

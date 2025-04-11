@@ -91,7 +91,7 @@ export const ChartContainer = ({
 
   return (
     <TooltipProvider> 
-      <div className="flex flex-col w-full h-full bg-white dark:bg-neutral-950">
+      <div className="flex flex-col w-full h-full bg-transparent">
         {/* Top Controls: Category, Search, Navigation - Commented out Category Buttons */}
         {/* 
         <div className="flex items-center justify-between p-4 border-b dark:border-neutral-800">

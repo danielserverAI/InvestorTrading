@@ -11,10 +11,12 @@ import TopMovers from "@/components/dashboard/top-movers";
 import TradeIdeas from "@/components/dashboard/trade-ideas";
 import MarketSentiment from "@/components/dashboard/market-sentiment";
 import CalendarEvents from "@/components/dashboard/calendar-events";
-import MobileNavigation from "@/components/layout/mobile-navigation";
 import { ChartContainer } from "@/components/charts/chart-container";
 import { ChatContainer } from "@/components/chat/ChatContainer";
 import type { Stock } from "@/components/charts/chart-container";
+import { Drawer } from "vaul";
+import { Button } from "@/components/ui/button";
+import { MessageCircle } from "lucide-react";
 
 // Mock data for testing - Replace with real data later
 const mockStocks = [
@@ -40,28 +42,27 @@ const Home = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex flex-col bg-gradient-to-b from-white to-neutral-50 dark:from-neutral-900 dark:to-neutral-950">
+      <div className="min-h-screen flex flex-col bg-gradient-to-b from-white to-neutral-50 dark:from-black dark:to-neutral-950">
         <Header activeView={activeView} setActiveView={setActiveView} onSearchChange={setSearchQuery} />
-        <main className="flex-1 flex flex-col container mx-auto px-4 py-4 overflow-y-auto" style={{ height: 'calc(100vh - 4rem)' }}>
+        <main className="flex-1 flex flex-col container mx-auto px-4 py-4 overflow-y-auto" style={{ minHeight: 'calc(100vh - 4rem)' }}>
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-            {/* Loading states */}
+            {/* Loading states - Apply darker card style */}
             <div className="col-span-1 lg:col-span-12">
-              <div className="h-28 animate-pulse rounded-3xl bg-white/80 dark:bg-neutral-800/80 backdrop-blur-md shadow-sm mb-4" />
+              <div className="h-28 animate-pulse rounded-3xl bg-white/80 dark:bg-neutral-900/80 backdrop-blur-md shadow-sm mb-4 border border-white/20 dark:border-neutral-800/50" />
             </div>
             <div className="col-span-1 lg:col-span-12">
-              <div className="h-24 animate-pulse rounded-3xl bg-white/80 dark:bg-neutral-800/80 backdrop-blur-md shadow-sm" />
+              <div className="h-24 animate-pulse rounded-3xl bg-white/80 dark:bg-neutral-900/80 backdrop-blur-md shadow-sm border border-white/20 dark:border-neutral-800/50" />
             </div>
           </div>
         </main>
-        <MobileNavigation activeView={activeView} setActiveView={setActiveView} />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-b from-white to-neutral-50 dark:from-neutral-900 dark:to-neutral-950">
+    <div className="min-h-screen flex flex-col bg-gradient-to-b from-white to-neutral-50 dark:from-black dark:to-neutral-950">
       <Header activeView={activeView} setActiveView={setActiveView} onSearchChange={setSearchQuery} />
-      <main className="flex-1 flex flex-col container mx-auto px-2 py-2 overflow-y-auto" style={{ height: 'calc(100vh - 4rem)' }}>
+      <main className="flex-1 flex flex-col container mx-auto px-2 py-2 overflow-y-auto" style={{ minHeight: 'calc(100vh - 4rem)' }}>
         {/* Market Status and Summary - Removed/Commented out */}
         {/*
         <div className="grid grid-cols-1 gap-4 mb-4">
@@ -80,13 +81,13 @@ const Home = () => {
           {/* Row 1: Chart & Chat (Max 70vh) */}
           {/* Chart Section */}
           <div className="lg:col-span-8 h-full"> {/* Added h-full back */} 
-            <div className="rounded-3xl bg-white/90 dark:bg-neutral-800/90 backdrop-blur-md shadow-sm p-4 border border-white/20 dark:border-neutral-700/20 h-full"> {/* Removed max-h, Added h-full back */} 
+            <div className="rounded-3xl bg-white/90 dark:bg-neutral-900/90 backdrop-blur-md shadow-sm p-4 border border-white/20 dark:border-neutral-800/50 h-full"> {/* Removed max-h, Added h-full back */} 
               <ChartContainer stocks={mockStocks} searchQuery={searchQuery} />
             </div>
           </div>
-          {/* Chat Interface */}
-          <div className="lg:col-span-4 h-full"> {/* Added h-full back */} 
-            <div className="rounded-3xl bg-white/90 dark:bg-neutral-800/90 backdrop-blur-md shadow-sm h-full overflow-hidden border border-white/20 dark:border-neutral-700/20"> {/* Removed max-h, Added h-full back */} 
+          {/* Desktop Chat Interface (Hidden on mobile/medium) */}
+          <div className="hidden lg:block lg:col-span-4 h-full"> {/* Changed md:block to lg:block */} 
+            <div className="rounded-3xl bg-white/90 dark:bg-neutral-900/90 backdrop-blur-md shadow-sm h-full overflow-hidden border border-white/20 dark:border-neutral-800/50"> {/* Removed max-h, Added h-full back */} 
               <ChatContainer />
             </div>
           </div>
@@ -97,21 +98,21 @@ const Home = () => {
               
               {/* Column 1: Market Movers & News */}
               <div className="space-y-4">
-                <div className="rounded-3xl bg-white/90 dark:bg-neutral-800/90 backdrop-blur-md shadow-sm p-4 border border-white/20 dark:border-neutral-700/20">
+                <div className="rounded-3xl bg-white/90 dark:bg-neutral-900/90 backdrop-blur-md shadow-sm p-4 border border-white/20 dark:border-neutral-800/50">
                   <TopMovers movers={marketData?.topMovers || []} />
                 </div>
-                <div className="rounded-3xl bg-white/90 dark:bg-neutral-800/90 backdrop-blur-md shadow-sm p-4 border border-white/20 dark:border-neutral-700/20">
+                <div className="rounded-3xl bg-white/90 dark:bg-neutral-900/90 backdrop-blur-md shadow-sm p-4 border border-white/20 dark:border-neutral-800/50">
                   <NewsSummary news={marketData?.news || []} />
                 </div>
               </div>
 
               {/* Column 2: Insights & Watchlist (Using Placeholders) */}
               <div className="space-y-4">
-                 <div className="rounded-3xl bg-white/90 dark:bg-neutral-800/90 backdrop-blur-md shadow-sm p-4 border border-white/20 dark:border-neutral-700/20">
+                 <div className="rounded-3xl bg-white/90 dark:bg-neutral-900/90 backdrop-blur-md shadow-sm p-4 border border-white/20 dark:border-neutral-800/50">
                   {/* Placeholder for Insights - Using TradeIdeas */} 
                    <TradeIdeas ideas={marketData?.tradeIdeas || []} />
                  </div>
-                 <div className="rounded-3xl bg-white/90 dark:bg-neutral-800/90 backdrop-blur-md shadow-sm p-4 border border-white/20 dark:border-neutral-700/20">
+                 <div className="rounded-3xl bg-white/90 dark:bg-neutral-900/90 backdrop-blur-md shadow-sm p-4 border border-white/20 dark:border-neutral-800/50">
                    {/* Placeholder for Smart Watchlist - Using MarketSentiment */} 
                    <MarketSentiment sentiment={marketData?.marketSentiment} />
                  </div>
@@ -119,7 +120,7 @@ const Home = () => {
 
               {/* Column 3: Calendar */}
               <div className="space-y-4">
-                <div className="rounded-3xl bg-white/90 dark:bg-neutral-800/90 backdrop-blur-md shadow-sm p-4 border border-white/20 dark:border-neutral-700/20">
+                <div className="rounded-3xl bg-white/90 dark:bg-neutral-900/90 backdrop-blur-md shadow-sm p-4 border border-white/20 dark:border-neutral-800/50">
                   {/* Placeholder for second Insights - Maybe duplicate TradeIdeas or leave empty? */} 
                   {/* For now, just placing CalendarEvents */} 
                   <CalendarEvents 
@@ -136,7 +137,35 @@ const Home = () => {
 
         </div>
       </main>
-      <MobileNavigation activeView={activeView} setActiveView={setActiveView} />
+      
+      {/* Mobile Chat Drawer (Hidden on large screens) */}
+      <div className="block lg:hidden"> {/* Changed md:hidden to lg:hidden */} 
+        <Drawer.Root shouldScaleBackground>
+          <Drawer.Trigger asChild>
+            <Button
+              variant="default"
+              size="icon"
+              className="fixed bottom-4 right-4 h-14 w-14 rounded-full shadow-lg z-50 bg-primary hover:bg-primary/90"
+              aria-label="Open Chat"
+            >
+              <MessageCircle className="h-6 w-6" />
+            </Button>
+          </Drawer.Trigger>
+          <Drawer.Portal>
+            <Drawer.Overlay className="fixed inset-0 bg-black/40 z-[55]" />
+            <Drawer.Content className="bg-neutral-100 dark:bg-neutral-950 flex flex-col rounded-t-[10px] h-[90%] mt-24 fixed bottom-0 left-0 right-0 z-[60]">
+              <div className="p-4 bg-neutral-100 dark:bg-neutral-950 rounded-t-[10px] flex-1">
+                {/* Handle to indicate draggable area */}
+                <div className="mx-auto w-12 h-1.5 flex-shrink-0 rounded-full bg-neutral-300 dark:bg-neutral-700 mb-4" />
+                {/* Render ChatContainer inside the drawer content */}
+                <div className="flex-1 h-[calc(100%-2rem)]"> {/* Ensure ChatContainer fits */} 
+                  <ChatContainer />
+                </div>
+              </div>
+            </Drawer.Content>
+          </Drawer.Portal>
+        </Drawer.Root>
+      </div>
     </div>
   );
 };
