@@ -91,22 +91,26 @@ export const ChatContainer = () => {
   };
 
   return (
-    <div className="flex h-full flex-col bg-background dark:bg-neutral-900">
+    <div className="flex flex-1 min-h-0 flex-col bg-background dark:bg-neutral-900 overflow-hidden rounded-xl">
       {/* <TabNavigation
         activeTab={state.activeTab}
         onTabChange={handleTabChange}
       /> */}
-      {/* Add Title Header */}
-      <div className="p-3 border-b border-neutral-200 dark:border-neutral-800">
+      {/* Title Header - Prevent shrinking */}
+      <div className="p-3 border-b border-neutral-200 dark:border-neutral-800 flex-shrink-0 bg-white dark:bg-neutral-900">
         <h2 className="text-base font-semibold text-neutral-800 dark:text-neutral-200">AI Assistant</h2>
       </div>
+      {/* MessageArea should handle its own growth and scrolling */}
       <MessageArea messages={state.messages} />
-      <InputBar
-        onSend={handleSendMessage}
-        onAgentChange={handleAgentChange}
-        selectedAgent={state.selectedAgent}
-        isProcessing={state.isProcessing}
-      />
+      {/* InputBar Wrapper - Prevent shrinking */}
+      <div className="flex-shrink-0">
+        <InputBar
+          onSend={handleSendMessage}
+          onAgentChange={handleAgentChange}
+          selectedAgent={state.selectedAgent}
+          isProcessing={state.isProcessing}
+        />
+      </div>
     </div>
   );
 }; 

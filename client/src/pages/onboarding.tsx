@@ -65,7 +65,7 @@ const Onboarding = () => {
   return (
     <div className="min-h-screen flex items-center justify-center bg-neutral-50 dark:bg-neutral-900 p-4">
       <Card className="w-full max-w-md">
-        <CardHeader className="bg-primary text-white">
+        <CardHeader>
           <CardTitle className="text-xl">Welcome to Trader's Daily Intel</CardTitle>
         </CardHeader>
         
@@ -79,15 +79,37 @@ const Onboarding = () => {
         
         <CardFooter className="flex justify-between">
           {currentStep > 1 ? (
-            <Button variant="outline" onClick={prevStep}>Back</Button>
+            <Button 
+              variant="outline" 
+              onClick={prevStep}
+              className="bg-transparent border border-neutral-300 dark:border-neutral-700 text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800"
+            >
+              Back
+            </Button>
           ) : (
-            <Button variant="outline" onClick={skipOnboarding}>Skip for Now</Button>
+            <Button 
+              variant="outline" 
+              onClick={skipOnboarding}
+              className="bg-transparent border border-neutral-300 dark:border-neutral-700 text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800"
+            >
+              Skip for Now
+            </Button>
           )}
           
           {currentStep < 4 ? (
-            <Button onClick={nextStep}>Continue</Button>
+            <Button 
+              onClick={nextStep}
+              className="bg-neutral-200 hover:bg-neutral-300 dark:bg-neutral-700 dark:hover:bg-neutral-600 text-neutral-900 dark:text-neutral-100"
+            >
+              Continue
+            </Button>
           ) : (
-            <Button onClick={handleSubmit}>Complete Setup</Button>
+            <Button 
+              onClick={handleSubmit}
+              className="bg-neutral-200 hover:bg-neutral-300 dark:bg-neutral-700 dark:hover:bg-neutral-600 text-neutral-900 dark:text-neutral-100"
+            >
+              Complete Setup
+            </Button>
           )}
         </CardFooter>
       </Card>

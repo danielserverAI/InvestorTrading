@@ -151,6 +151,9 @@ export const TradingViewChart = ({
   useEffect(() => {
     const data = fetchIntervalData(symbol, interval);
     setChartData(data);
+    // Reset markers and selections when data changes
+    setMarkers([]); 
+    setSelectedPoints(new Set());
   }, [symbol, interval]);
 
   // Generate line/area/baseline data from candle/bar data
@@ -173,29 +176,58 @@ export const TradingViewChart = ({
     }
   }, [chartType]);
 
-  // Update chart type, data, and attach/update markers plugin
+  // THIS EFFECT HANDLES CHART CREATION & INITIAL SERIES
   useEffect(() => {
-    if (!chartRef.current || !chartData || chartData.length === 0) return;
+    if (!chartContainerRef.current || !chartData || chartData.length === 0) return;
 
-    const removeSeries = (seriesRef: React.MutableRefObject<ISeriesApi<SeriesType> | null>) => {
-      if (seriesRef.current && chartRef.current) {
-        try {
-          chartRef.current.removeSeries(seriesRef.current);
-        } catch (e) {
-          console.warn("Error removing series:", e);
-        }
-        seriesRef.current = null;
-      }
+    const isDark = document.documentElement.classList.contains('dark');
+    const gridColor = isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)';
+    const textColor = isDark ? '#D1D5DB' : '#1F2937';
+
+    const chartOptions = {
+        layout: {
+            background: { color: 'transparent' },
+            textColor: textColor,
+        },
+        grid: {
+            vertLines: { color: gridColor },
+            horzLines: { color: gridColor },
+        },
+        crosshair: {
+            mode: CrosshairMode.Normal,
+        },
+        rightPriceScale: {
+            borderColor: gridColor,
+        },
+        timeScale: {
+            borderColor: gridColor,
+            timeVisible: true,
+            secondsVisible: false,
+            tickMarkFormatter: (time: Time, tickMarkType: TickMarkType) => {
+              const date = new Date((time as number) * 1000);
+              switch (tickMarkType) {
+                  case TickMarkType.Year:
+                      return date.getFullYear().toString();
+                  case TickMarkType.Month:
+                      return date.toLocaleDateString(undefined, { month: 'short' });
+                  case TickMarkType.DayOfMonth:
+                      return date.getDate().toString();
+                  case TickMarkType.Time:
+                      return date.toLocaleTimeString();
+                  default:
+                      return '';
+              }
+            }
+        },
+        handleScroll: true,
+        handleScale: true,
     };
 
-    removeSeries(candleSeriesRef as React.MutableRefObject<ISeriesApi<SeriesType> | null>);
-    removeSeries(lineSeriesRef as React.MutableRefObject<ISeriesApi<SeriesType> | null>);
-    removeSeries(barSeriesRef as React.MutableRefObject<ISeriesApi<SeriesType> | null>);
-    removeSeries(areaSeriesRef as React.MutableRefObject<ISeriesApi<SeriesType> | null>);
-    removeSeries(baselineSeriesRef as React.MutableRefObject<ISeriesApi<SeriesType> | null>);
-    
+    chartRef.current = createChart(chartContainerRef.current, chartOptions);
+
+    // --- BEGIN INITIAL SERIES CREATION --- 
     const singleValueData = generateSingleValueData(chartData);
-    const priceLineColor = isDarkMode ? '#A0A0A0' : '#505050';
+    const priceLineColor = isDark ? '#A0A0A0' : '#505050';
     const priceFormat: PriceFormatBuiltIn = { type: 'price', precision: 2, minMove: 0.01 };
     const commonSeriesOptions = {
       lastValueVisible: true,
@@ -205,185 +237,152 @@ export const TradingViewChart = ({
       priceLineStyle: 2, // Dashed
     };
 
-    // Add new series based on type
+    // Add initial series based on chartType prop
     switch (chartType) {
       case 'candles':
         candleSeriesRef.current = chartRef.current.addCandlestickSeries({
-          ...commonSeriesOptions,
-          priceFormat: priceFormat,
-          upColor: '#26a69a',
-          downColor: '#ef5350',
-          borderUpColor: '#26a69a',
-          borderDownColor: '#ef5350',
-          wickUpColor: '#26a69a',
-          wickDownColor: '#ef5350',
+          ...commonSeriesOptions, priceFormat: priceFormat, upColor: '#26a69a', downColor: '#ef5350', borderUpColor: '#26a69a', borderDownColor: '#ef5350', wickUpColor: '#26a69a', wickDownColor: '#ef5350',
         });
         candleSeriesRef.current.setData(chartData as CandlestickData<Time>[]);
         break;
       case 'bars':
         barSeriesRef.current = chartRef.current.addBarSeries({
-          ...commonSeriesOptions,
-          priceFormat: priceFormat,
-          upColor: '#26a69a',
-          downColor: '#ef5350',
-          thinBars: false,
+          ...commonSeriesOptions, priceFormat: priceFormat, upColor: '#26a69a', downColor: '#ef5350', thinBars: false,
         });
         barSeriesRef.current.setData(chartData as BarData<Time>[]);
         break;
       case 'area':
         areaSeriesRef.current = chartRef.current.addAreaSeries({
-          ...commonSeriesOptions,
-          priceFormat: priceFormat,
-          lineColor: '#2962FF',
-          topColor: '#2962FF',
-          bottomColor: 'rgba(41, 98, 255, 0.28)',
-          lineWidth: 2,
+          ...commonSeriesOptions, priceFormat: priceFormat, lineColor: '#2962FF', topColor: '#2962FF', bottomColor: 'rgba(41, 98, 255, 0.28)', lineWidth: 2,
         });
         areaSeriesRef.current.setData(singleValueData);
         break;
       case 'baseline':
         baselineSeriesRef.current = chartRef.current.addBaselineSeries({
-          ...commonSeriesOptions,
-          priceFormat: priceFormat,
-          baseValue: { type: 'price', price: singleValueData[0].value },
-          topLineColor: 'rgba(38, 166, 154, 1)',
-          topFillColor1: 'rgba(38, 166, 154, 0.28)',
-          topFillColor2: 'rgba(38, 166, 154, 0.05)',
-          bottomLineColor: 'rgba(239, 83, 80, 1)',
-          bottomFillColor1: 'rgba(239, 83, 80, 0.05)',
-          bottomFillColor2: 'rgba(239, 83, 80, 0.28)',
+          ...commonSeriesOptions, priceFormat: priceFormat, baseValue: { type: 'price', price: singleValueData[0]?.value || 0 }, topLineColor: 'rgba(38, 166, 154, 1)', topFillColor1: 'rgba(38, 166, 154, 0.28)', topFillColor2: 'rgba(38, 166, 154, 0.05)', bottomLineColor: 'rgba(239, 83, 80, 1)', bottomFillColor1: 'rgba(239, 83, 80, 0.05)', bottomFillColor2: 'rgba(239, 83, 80, 0.28)',
         });
         baselineSeriesRef.current.setData(singleValueData);
         break;
       case 'line':
       default:
         lineSeriesRef.current = chartRef.current.addLineSeries({
-          ...commonSeriesOptions,
-          priceFormat: priceFormat,
-          color: '#2962FF',
-          lineWidth: 2,
-          crosshairMarkerVisible: true,
-          crosshairMarkerRadius: 4,
-          crosshairMarkerBorderColor: '#2962FF',
-          crosshairMarkerBackgroundColor: '#ffffff',
-          lineType: 0,
+          ...commonSeriesOptions, priceFormat: priceFormat, color: '#2962FF', lineWidth: 2,
         });
         lineSeriesRef.current.setData(singleValueData);
         break;
     }
+    // --- END INITIAL SERIES CREATION --- 
 
-    // IMPORTANT: Apply existing markers to the newly created series
-    const currentActiveSeries = getActiveSeries();
-    if (currentActiveSeries) {
-        // Ensure data is set before applying price scale options
-        if (chartType === 'candles') {
-          (currentActiveSeries as ISeriesApi<'Candlestick'>).setData(chartData as CandlestickData<Time>[]);
-        } else if (chartType === 'bars') {
-          (currentActiveSeries as ISeriesApi<'Bar'>).setData(chartData as BarData<Time>[]);
-        } else {
-          (currentActiveSeries as ISeriesApi<'Line' | 'Area' | 'Baseline'>).setData(singleValueData);
-        }
-
-        // Apply ZERO margins AFTER setting data
-        currentActiveSeries.priceScale().applyOptions({
-            scaleMargins: {
-                top: 0,
-                bottom: 0,
-            },
-        });
-
-        console.log("Applying initial markers to new series:", markers);
-        currentActiveSeries.setMarkers(markers);
-    }
-
+    // Fit content initially
     chartRef.current.timeScale().fitContent();
 
-  }, [chartType, chartData, isDarkMode, getActiveSeries]);
-
-  // Initialization Effect
-  useEffect(() => {
-    if (!chartContainerRef.current) return;
-
-    const gridColor = isDarkMode ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.06)';
-    const textColor = isDarkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)';
-    const crosshairLineColor = isDarkMode ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.2)';
-    const crosshairLabelBgColor = isDarkMode ? '#404040' : '#e5e5e5';
-    const watermarkColor = isDarkMode ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)';
-
-      const chart = createChart(chartContainerRef.current, {
-        layout: {
-          background: { color: 'transparent' },
-        textColor: textColor, 
-        attributionLogo: false,
-        },
-        grid: {
-        vertLines: { color: gridColor },
-        horzLines: { color: gridColor },
-      },
-      width: chartContainerRef.current.clientWidth,
-      height: chartContainerRef.current.clientHeight || 500,
-      crosshair: {
-        mode: CrosshairMode.Normal,
-        vertLine: { width: 4 as LineWidth, color: crosshairLineColor, style: 0, labelBackgroundColor: crosshairLabelBgColor },
-        horzLine: { color: crosshairLineColor, labelBackgroundColor: crosshairLabelBgColor },
-      },
-      timeScale: {
-        timeVisible: true,
-        secondsVisible: false,
-        borderColor: gridColor,
-        rightOffset: 5,
-        barSpacing: 10,
-        minBarSpacing: 3,
-        fixLeftEdge: true,
-        fixRightEdge: true,
-        lockVisibleTimeRangeOnResize: true,
-        tickMarkFormatter: (time: Time, tickMarkType: TickMarkType, locale: string) => {
-          const date = new Date((time as number) * 1000);
-          switch (tickMarkType) {
-            case TickMarkType.Year: return date.toLocaleDateString(locale, { year: 'numeric' });
-            case TickMarkType.Month: return date.toLocaleDateString(locale, { month: 'short' });
-            case TickMarkType.DayOfMonth: return date.toLocaleDateString(locale, { day: 'numeric' });
-            case TickMarkType.Time: return '';
-            case TickMarkType.TimeWithSeconds: return '';
-            default: return date.toLocaleDateString(locale);
-          }
-        },
-      },
-      watermark: {
-        visible: true, text: symbol, fontSize: 48, color: watermarkColor, horzAlign: 'center', vertAlign: 'center',
-      },
-      rightPriceScale: {
-        borderColor: gridColor,
-        autoScale: true,
-        borderVisible: true,
-        textColor: textColor,
-        mode: 0, alignLabels: true, ticksVisible: true,
-      },
-    });
-      chartRef.current = chart;
-
-      const handleResize = () => {
-      if (chartContainerRef.current && chartRef.current) {
-        chartRef.current.applyOptions({ width: chartContainerRef.current.clientWidth, height: chartContainerRef.current.clientHeight });
-      }
+    // Add resize observer
+    const handleResize = () => {
+        if (chartContainerRef.current && chartRef.current) {
+            // Apply both width and height
+            chartRef.current.applyOptions({
+              width: chartContainerRef.current.clientWidth,
+              height: chartContainerRef.current.clientHeight
+            });
+        }
     };
-      window.addEventListener('resize', handleResize);
+    const resizeObserver = new ResizeObserver(handleResize);
+    resizeObserver.observe(chartContainerRef.current);
 
-      return () => {
-        window.removeEventListener('resize', handleResize);
-      if (chartRef.current) {
-        chartRef.current.remove();
+    // Cleanup function
+    return () => {
+        resizeObserver.disconnect();
+        chartRef.current?.remove();
         chartRef.current = null;
-      }
-      candleSeriesRef.current = null; lineSeriesRef.current = null; barSeriesRef.current = null; areaSeriesRef.current = null; baselineSeriesRef.current = null;
+        // Clear series refs on cleanup
+        candleSeriesRef.current = null;
+        lineSeriesRef.current = null;
+        barSeriesRef.current = null;
+        areaSeriesRef.current = null;
+        baselineSeriesRef.current = null;
     };
-  }, [symbol, isDarkMode]);
+    // DEPENDENCIES: Now depends on data and type for initial setup
+  }, [chartData, chartType, symbol, interval]); 
 
-  // Click handler setup effect
+
+  // THIS EFFECT HANDLES CHART TYPE *UPDATES* and MARKERS
   useEffect(() => {
-    if (!chartRef.current) return;
+    if (!chartRef.current || !chartData || chartData.length === 0) return;
+    
+    // Check if chartType actually changed (or if it's the initial call - comparing refs)
+    let currentSeriesType: SeriesType | null = null;
+    if (candleSeriesRef.current) currentSeriesType = 'Candlestick';
+    else if (lineSeriesRef.current) currentSeriesType = 'Line';
+    else if (barSeriesRef.current) currentSeriesType = 'Bar';
+    else if (areaSeriesRef.current) currentSeriesType = 'Area';
+    else if (baselineSeriesRef.current) currentSeriesType = 'Baseline';
 
-    const handleClick = (param: MouseEventParams<Time>) => {
+    const targetSeriesType = 
+      chartType === 'candles' ? 'Candlestick' :
+      chartType === 'bars' ? 'Bar' :
+      chartType === 'line' ? 'Line' :
+      chartType === 'area' ? 'Area' :
+      chartType === 'baseline' ? 'Baseline' : null;
+
+    // Only remove/re-add if the type is actually different
+    if (targetSeriesType && currentSeriesType !== targetSeriesType) {
+        console.log('Chart type changed, re-creating series');
+        // Remove all existing series refs
+        const removeSeries = (seriesRef: React.MutableRefObject<ISeriesApi<SeriesType> | null>) => {
+          if (seriesRef.current && chartRef.current) {
+            try { chartRef.current.removeSeries(seriesRef.current); } catch (e) { console.warn("Error removing series:", e); }
+            seriesRef.current = null;
+          }
+        };
+        removeSeries(candleSeriesRef as any);
+        removeSeries(lineSeriesRef as any);
+        removeSeries(barSeriesRef as any);
+        removeSeries(areaSeriesRef as any);
+        removeSeries(baselineSeriesRef as any);
+
+        // Add the new series (copy logic from the main effect)
+        const singleValueData = generateSingleValueData(chartData);
+        const isDark = document.documentElement.classList.contains('dark');
+        const priceLineColor = isDark ? '#A0A0A0' : '#505050';
+        const priceFormat: PriceFormatBuiltIn = { type: 'price', precision: 2, minMove: 0.01 };
+        const commonSeriesOptions = { lastValueVisible: true, priceLineVisible: true, priceLineWidth: 1 as LineWidth, priceLineColor: priceLineColor, priceLineStyle: 2 };
+
+        switch (chartType) {
+          case 'candles':
+            candleSeriesRef.current = chartRef.current.addCandlestickSeries({ ...commonSeriesOptions, priceFormat: priceFormat, upColor: '#26a69a', downColor: '#ef5350', borderUpColor: '#26a69a', borderDownColor: '#ef5350', wickUpColor: '#26a69a', wickDownColor: '#ef5350' });
+            candleSeriesRef.current.setData(chartData as CandlestickData<Time>[]);
+            break;
+          case 'bars':
+            barSeriesRef.current = chartRef.current.addBarSeries({ ...commonSeriesOptions, priceFormat: priceFormat, upColor: '#26a69a', downColor: '#ef5350', thinBars: false });
+            barSeriesRef.current.setData(chartData as BarData<Time>[]);
+            break;
+          case 'area':
+            areaSeriesRef.current = chartRef.current.addAreaSeries({ ...commonSeriesOptions, priceFormat: priceFormat, lineColor: '#2962FF', topColor: '#2962FF', bottomColor: 'rgba(41, 98, 255, 0.28)', lineWidth: 2 });
+            areaSeriesRef.current.setData(singleValueData);
+            break;
+          case 'baseline':
+            baselineSeriesRef.current = chartRef.current.addBaselineSeries({ ...commonSeriesOptions, priceFormat: priceFormat, baseValue: { type: 'price', price: singleValueData[0]?.value || 0 }, topLineColor: 'rgba(38, 166, 154, 1)', topFillColor1: 'rgba(38, 166, 154, 0.28)', topFillColor2: 'rgba(38, 166, 154, 0.05)', bottomLineColor: 'rgba(239, 83, 80, 1)', bottomFillColor1: 'rgba(239, 83, 80, 0.05)', bottomFillColor2: 'rgba(239, 83, 80, 0.28)'});
+            baselineSeriesRef.current.setData(singleValueData);
+            break;
+          case 'line':
+          default:
+            lineSeriesRef.current = chartRef.current.addLineSeries({ ...commonSeriesOptions, priceFormat: priceFormat, color: '#2962FF', lineWidth: 2 });
+            lineSeriesRef.current.setData(singleValueData);
+            break;
+        }
+    }
+    
+    // Update markers on the active series (should run even if type didn't change)
+    const activeSeries = getActiveSeries();
+    if (activeSeries) {
+      activeSeries.setMarkers(markers);
+    }
+
+  }, [chartType, chartData, isDarkMode, markers]); // Keep isDarkMode here for theme updates
+
+
+  // Click handler for markers/actions (keep as is)
+  const handleClick = useCallback((param: MouseEventParams<Time>) => {
       if (!param.point || !param.time || !selectedActionConfig) return; // Need config
       
       const timeValue = param.time as number; 
@@ -432,92 +431,16 @@ export const TradingViewChart = ({
             setMarkers(prevMarkers => [...prevMarkers, newMarker]); 
          }
       }
-    };
+  }, [selectedActionConfig, markers, onKeyPointDetected, getActiveSeries]);
 
+  // Attach click handler (keep as is)
+  useEffect(() => {
+    if (!chartRef.current) return;
     chartRef.current.subscribeClick(handleClick);
     return () => {
       chartRef.current?.unsubscribeClick(handleClick);
     };
-  }, [
-    chartRef.current, 
-    onKeyPointDetected, chartType, selectedPoints, getActiveSeries, 
-    selectedActionConfig // Depend on the whole config object
-  ]);
-
-  // Effect to update markers on the active series when the `markers` state changes
-  useEffect(() => {
-    const currentActiveSeries = getActiveSeries();
-    if (currentActiveSeries) {
-        // Sort markers by time before setting them
-        const sortedMarkers = [...markers].sort((a, b) => (a.time as number) - (b.time as number));
-        
-        console.log("Setting sorted markers via series.setMarkers:", sortedMarkers);
-        currentActiveSeries.setMarkers(sortedMarkers); // Pass the sorted array
-    } else {
-        console.log("Skipping marker update, no active series");
-    }
-    // Dependency: run whenever markers array changes or the active series instance might change
-  }, [markers, getActiveSeries]); 
-
-  // Update visual representation of selected points (Coloring Candle/Bar)
-  useEffect(() => {
-     const isSelectAction = selectedActionConfig?.id === 'select';
-    // Only apply coloring if select action is active
-    if (isSelectAction && (chartType === 'candles' || chartType === 'bars') && chartData && chartData.length > 0) {
-      const activeSeries = chartType === 'candles' ? candleSeriesRef.current : barSeriesRef.current;
-      if (activeSeries) {
-        const updatedData = chartData.map(point => ({
-          ...point,
-          color: selectedPoints.has(point.time as number) ? (isDarkMode ? '#FFA726' : '#FB8C00') : undefined,
-          wickColor: selectedPoints.has(point.time as number) ? (isDarkMode ? '#FFA726' : '#FB8C00') : undefined,
-        }));
-        
-        if (chartType === 'candles') {
-          activeSeries.setData(updatedData as SeriesDataItemTypeMap['Candlestick'][]);
-        } else {
-          activeSeries.setData(updatedData as SeriesDataItemTypeMap['Bar'][]);
-        }
-      }
-    } else if (chartType === 'candles' || chartType === 'bars') {
-      // If not in select mode, ensure data doesn't have selection colors
-      const activeSeries = chartType === 'candles' ? candleSeriesRef.current : barSeriesRef.current;
-      if (activeSeries && chartData.some(p => (p as any).color !== undefined)) { // Check if reset needed
-         const resetData = chartData.map(point => ({ ...point, color: undefined, wickColor: undefined }));
-          if (chartType === 'candles') {
-                activeSeries.setData(resetData as SeriesDataItemTypeMap['Candlestick'][]);
-            } else { 
-                activeSeries.setData(resetData as SeriesDataItemTypeMap['Bar'][]);
-            }
-      }
-    }
-  }, [selectedPoints, chartData, chartType, isDarkMode, selectedActionConfig]); // Add config dependency
-
-  // Update cursor based on selected action
-  useEffect(() => {
-    if (!chartRef.current) return;
-    let cursorStyle = 'default';
-    let crosshairMode = CrosshairMode.Magnet;
-    const actionId = selectedActionConfig?.id;
-
-    if (actionId === 'delete') {
-        cursorStyle = 'pointer'; // Or maybe a specific delete cursor?
-        crosshairMode = CrosshairMode.Normal;
-    } else if (actionId === 'select') {
-        cursorStyle = 'pointer';
-        crosshairMode = CrosshairMode.Normal;
-    } else if (actionId) { // Any other action ID implies marker placement
-        cursorStyle = 'crosshair'; 
-        crosshairMode = CrosshairMode.Normal;
-    }
-
-    if (chartContainerRef.current) {
-        chartContainerRef.current.style.cursor = cursorStyle;
-    }
-    
-    chartRef.current.applyOptions({
-        crosshair: { mode: crosshairMode },
-    });
-  }, [selectedActionConfig]); // Depend only on action config
+  }, [handleClick]); // Add handleClick dependency
 
   return (
     <div className="w-full h-full relative"> 

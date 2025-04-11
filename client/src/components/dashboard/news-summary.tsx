@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, KeyboardEvent, useRef } from "react";
 import { Card } from "@/components/ui/card";
 import { News } from "@/lib/types";
 import { Button } from "@/components/ui/button";
@@ -19,6 +19,7 @@ import { useSwipeable } from "react-swipeable";
 import NewsDetail from "./news-detail";
 import { useNews } from "@/hooks/use-news";
 import { useLocation } from "wouter";
+import { cn } from "@/lib/utils";
 
 // Function to get classification icon
 const getClassificationIcon = (classification: string | undefined) => {
@@ -135,35 +136,39 @@ const SwipeableNewsItem = ({
             </div>
           )}
           
-          <div className="mt-2 flex items-center gap-2">
-            <Button variant="ghost" size="sm" className="text-primary-500 h-7 px-3 rounded-full text-xs font-medium">
+          <div className="mt-2 flex items-center gap-2 flex-wrap">
+            {/* Read Full Story Button */}
+            <Button variant="ghost" size="sm" className="h-7 px-3 rounded-full text-xs font-medium text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800 hover:text-neutral-900 dark:hover:text-neutral-100">
               Read Full Story
             </Button>
             
-            {/* Interactive buttons for mobile friendliness */}
+            {/* Analysis Button */}
             <Button 
               variant="outline" 
               size="sm" 
               onClick={onToggleAnalysis}
-              className={`h-7 px-3 rounded-full text-xs ${
+              className={cn(
+                "h-7 px-3 rounded-full text-xs flex items-center gap-1 border", // Added base 'border'
                 showAIAnalysis
-                  ? "bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 border-green-200 dark:border-green-800"
-                  : ""
-              }`}
+                  ? "bg-neutral-200 dark:bg-neutral-700 border-neutral-300 dark:border-neutral-600 text-neutral-800 dark:text-neutral-200" // Active state: neutral bg + text
+                  : "bg-transparent border-neutral-300 dark:border-neutral-700 text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800 hover:text-neutral-900 dark:hover:text-neutral-100" // Inactive: transparent bg, neutral text + hover
+              )}
             >
-              <BrainCircuit className="h-3.5 w-3.5 mr-1" /> 
+              <BrainCircuit className="h-3.5 w-3.5" />
               Analysis
             </Button>
             
+            {/* Follow Button */}
             <Button 
               variant="outline" 
               size="sm" 
               onClick={handleFollow}
-              className={`h-7 px-3 rounded-full text-xs ${
+              className={cn(
+                "h-7 px-3 rounded-full text-xs flex items-center gap-1 border", // Added base 'border'
                 isFollowing
-                  ? "bg-amber-100 dark:bg-amber-900 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800"
-                  : ""
-              }`}
+                  ? "bg-neutral-200 dark:bg-neutral-700 border-neutral-300 dark:border-neutral-600 text-neutral-800 dark:text-neutral-200" // Active state: neutral bg + text
+                  : "bg-transparent border-neutral-300 dark:border-neutral-700 text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800 hover:text-neutral-900 dark:hover:text-neutral-100" // Inactive: transparent bg, neutral text + hover
+              )}
             >
               {isFollowing ? (
                 <>
@@ -178,13 +183,14 @@ const SwipeableNewsItem = ({
               )}
             </Button>
             
+            {/* Mark Read Button */}
             <Button 
               variant="outline" 
               size="sm" 
               onClick={onMarkAsRead}
-              className="h-7 px-3 rounded-full text-xs"
+              className="h-7 px-3 rounded-full text-xs flex items-center gap-1 border bg-transparent border-neutral-300 dark:border-neutral-700 text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800 hover:text-neutral-900 dark:hover:text-neutral-100"
             >
-              <Check className="h-3.5 w-3.5 mr-1" /> 
+              <Check className="h-3.5 w-3.5" /> 
               Mark Read
             </Button>
           </div>
@@ -369,24 +375,25 @@ const NewsSummary = ({ news: initialNews }: NewsSummaryProps) => {
         <Button 
           variant="ghost" 
           size="sm" 
-          className="h-8 text-sm text-primary"
+          // Remove primary text color, use neutral hover
+          className="h-8 text-sm text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800"
           onClick={() => navigate("/news")}
         >
           See All <ChevronRight className="h-4 w-4 ml-1" />
         </Button>
       </div>
       
-      {/* Category filter tabs */}
+      {/* Category filter tabs - remove primary border/text */}
       <div className="border-b border-neutral-200 dark:border-neutral-800 overflow-x-auto">
         <div className="flex px-4">
           <Button
             variant="ghost"
             size="sm"
-            className={`rounded-none border-b-2 ${
+            className={cn("rounded-none border-b-2 px-3 py-2 text-sm font-medium",
               category === "all"
-                ? "border-primary text-primary"
-                : "border-transparent text-neutral-500"
-            } px-3 py-2 text-sm font-medium`}
+                ? "border-neutral-800 dark:border-neutral-200 text-neutral-900 dark:text-neutral-100" // Active: neutral border/text
+                : "border-transparent text-neutral-500 hover:border-neutral-300 dark:hover:border-neutral-700" // Inactive
+            )}
             onClick={() => setCategory("all")}
           >
             All News
@@ -395,11 +402,11 @@ const NewsSummary = ({ news: initialNews }: NewsSummaryProps) => {
           <Button
             variant="ghost"
             size="sm"
-            className={`rounded-none border-b-2 ${
+            className={cn("rounded-none border-b-2 px-3 py-2 text-sm font-medium",
               category === "macro"
-                ? "border-primary text-primary"
-                : "border-transparent text-neutral-500"
-            } px-3 py-2 text-sm font-medium`}
+                ? "border-neutral-800 dark:border-neutral-200 text-neutral-900 dark:text-neutral-100"
+                : "border-transparent text-neutral-500 hover:border-neutral-300 dark:hover:border-neutral-700"
+            )}
             onClick={() => setCategory("macro")}
           >
             Market News
@@ -408,11 +415,11 @@ const NewsSummary = ({ news: initialNews }: NewsSummaryProps) => {
           <Button
             variant="ghost"
             size="sm"
-            className={`rounded-none border-b-2 ${
+            className={cn("rounded-none border-b-2 px-3 py-2 text-sm font-medium",
               category === "portfolio"
-                ? "border-primary text-primary"
-                : "border-transparent text-neutral-500"
-            } px-3 py-2 text-sm font-medium`}
+                ? "border-neutral-800 dark:border-neutral-200 text-neutral-900 dark:text-neutral-100"
+                : "border-transparent text-neutral-500 hover:border-neutral-300 dark:hover:border-neutral-700"
+            )}
             onClick={() => setCategory("portfolio")}
           >
             Your Portfolio
@@ -421,11 +428,11 @@ const NewsSummary = ({ news: initialNews }: NewsSummaryProps) => {
           <Button
             variant="ghost"
             size="sm"
-            className={`rounded-none border-b-2 ${
+            className={cn("rounded-none border-b-2 px-3 py-2 text-sm font-medium",
               category === "watchlist"
-                ? "border-primary text-primary"
-                : "border-transparent text-neutral-500"
-            } px-3 py-2 text-sm font-medium`}
+                ? "border-neutral-800 dark:border-neutral-200 text-neutral-900 dark:text-neutral-100"
+                : "border-transparent text-neutral-500 hover:border-neutral-300 dark:hover:border-neutral-700"
+            )}
             onClick={() => setCategory("watchlist")}
           >
             Your Watchlist

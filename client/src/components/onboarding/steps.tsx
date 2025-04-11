@@ -37,6 +37,7 @@ export const OnboardingSteps = ({ currentStep, formData, updateForm }: Onboardin
             value={formData.username}
             onChange={(e) => updateForm('username', e.target.value)}
             placeholder="Enter username"
+            className="bg-neutral-100 dark:bg-neutral-800 border-neutral-200 dark:border-neutral-700 rounded-full px-4 py-2 text-sm outline-none placeholder:text-neutral-500 text-neutral-900 dark:text-neutral-100 focus-visible:ring-1 focus-visible:ring-neutral-400 dark:focus-visible:ring-neutral-600"
           />
         </div>
         
@@ -48,6 +49,7 @@ export const OnboardingSteps = ({ currentStep, formData, updateForm }: Onboardin
             value={formData.email}
             onChange={(e) => updateForm('email', e.target.value)}
             placeholder="Enter your email"
+            className="bg-neutral-100 dark:bg-neutral-800 border-neutral-200 dark:border-neutral-700 rounded-full px-4 py-2 text-sm outline-none placeholder:text-neutral-500 text-neutral-900 dark:text-neutral-100 focus-visible:ring-1 focus-visible:ring-neutral-400 dark:focus-visible:ring-neutral-600"
           />
         </div>
         
@@ -59,6 +61,7 @@ export const OnboardingSteps = ({ currentStep, formData, updateForm }: Onboardin
             value={formData.password}
             onChange={(e) => updateForm('password', e.target.value)}
             placeholder="Create a secure password"
+            className="bg-neutral-100 dark:bg-neutral-800 border-neutral-200 dark:border-neutral-700 rounded-full px-4 py-2 text-sm outline-none placeholder:text-neutral-500 text-neutral-900 dark:text-neutral-100 focus-visible:ring-1 focus-visible:ring-neutral-400 dark:focus-visible:ring-neutral-600"
           />
         </div>
       </div>

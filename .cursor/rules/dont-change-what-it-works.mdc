@@ -1,0 +1,12 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+
+# Your rule content
+
+- When asked to fix issues dont delete what is currently working, only fix what is the issue
+- If you really need to change what is working for something new ask first if you should proceed.
+- When you dont know what you are doing look up the codebase to understand the code
+- Never make changes you are not sure about

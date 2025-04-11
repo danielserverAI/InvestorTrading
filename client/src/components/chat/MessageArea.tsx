@@ -1,14 +1,26 @@
 import { Message } from './types';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
+import { useRef, useEffect } from 'react';
 
 interface MessageAreaProps {
   messages: Message[];
 }
 
 export const MessageArea = ({ messages }: MessageAreaProps) => {
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollTop = messagesEndRef.current.scrollHeight;
+    }
+  }, [messages]);
+
   return (
-    <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-white dark:bg-neutral-900">
+    <div 
+      ref={messagesEndRef} 
+      className="flex-1 overflow-y-auto p-4 space-y-4 bg-white dark:bg-neutral-900 min-h-0"
+    >
       {messages.map((message) => (
         <div
           key={message.id}

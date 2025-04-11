@@ -86,53 +86,45 @@ const Home = () => {
             </div>
           </div>
           {/* Desktop Chat Interface (Hidden on mobile/medium) */}
-          <div className="hidden lg:block lg:col-span-4 h-full"> {/* Changed md:block to lg:block */} 
-            <div className="rounded-3xl bg-white/90 dark:bg-neutral-900/90 backdrop-blur-md shadow-sm h-full overflow-hidden border border-white/20 dark:border-neutral-800/50"> {/* Removed max-h, Added h-full back */} 
+          <div className="hidden lg:block lg:col-span-4 h-full"> {/* Changed md:block to lg:block */}
+            <div className="rounded-3xl bg-white/90 dark:bg-neutral-900/90 backdrop-blur-md shadow-sm h-full border border-white/20 dark:border-neutral-800/50 flex"> 
               <ChatContainer />
             </div>
           </div>
 
-          {/* Row 2: Dashboard Components (Auto Height) */}
-          <div className="lg:col-span-12 mt-4"> {/* Spans full width, appears in second row */} 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              
-              {/* Column 1: Market Movers & News */}
-              <div className="space-y-4">
-                <div className="rounded-3xl bg-white/90 dark:bg-neutral-900/90 backdrop-blur-md shadow-sm p-4 border border-white/20 dark:border-neutral-800/50">
-                  <TopMovers movers={marketData?.topMovers || []} />
-                </div>
-                <div className="rounded-3xl bg-white/90 dark:bg-neutral-900/90 backdrop-blur-md shadow-sm p-4 border border-white/20 dark:border-neutral-800/50">
-                  <NewsSummary news={marketData?.news || []} />
-                </div>
-              </div>
-
-              {/* Column 2: Insights & Watchlist (Using Placeholders) */}
-              <div className="space-y-4">
-                 <div className="rounded-3xl bg-white/90 dark:bg-neutral-900/90 backdrop-blur-md shadow-sm p-4 border border-white/20 dark:border-neutral-800/50">
-                  {/* Placeholder for Insights - Using TradeIdeas */} 
-                   <TradeIdeas ideas={marketData?.tradeIdeas || []} />
-                 </div>
-                 <div className="rounded-3xl bg-white/90 dark:bg-neutral-900/90 backdrop-blur-md shadow-sm p-4 border border-white/20 dark:border-neutral-800/50">
-                   {/* Placeholder for Smart Watchlist - Using MarketSentiment */} 
-                   <MarketSentiment sentiment={marketData?.marketSentiment} />
-                 </div>
-              </div>
-
-              {/* Column 3: Calendar */}
-              <div className="space-y-4">
-                <div className="rounded-3xl bg-white/90 dark:bg-neutral-900/90 backdrop-blur-md shadow-sm p-4 border border-white/20 dark:border-neutral-800/50">
-                  {/* Placeholder for second Insights - Maybe duplicate TradeIdeas or leave empty? */} 
-                  {/* For now, just placing CalendarEvents */} 
-                  <CalendarEvents 
-                    earnings={marketData?.upcomingEarnings || []} 
-                    dividends={marketData?.dividends || []} 
-                    economic={marketData?.economicEvents || []}
-                  />
-                </div>
-                 {/* Add another component here if needed based on image */} 
-              </div>
-
+          {/* Row 2: Dashboard Components (New Structure) */}
+          {/* News Summary below Chart */}
+          <div className="lg:col-span-8 mt-4"> 
+            <div className="rounded-3xl bg-white/90 dark:bg-neutral-900/90 backdrop-blur-md shadow-sm p-4 border border-white/20 dark:border-neutral-800/50">
+              <NewsSummary news={marketData?.news || []} />
             </div>
+          </div>
+
+          {/* Stacked Components (Movers, Calendar, Sentiment) below Chat */}
+          <div className="lg:col-span-4 mt-4 space-y-4"> 
+            {/* Market Movers */}
+            <div className="rounded-3xl bg-white/90 dark:bg-neutral-900/90 backdrop-blur-md shadow-sm p-4 border border-white/20 dark:border-neutral-800/50">
+              <TopMovers movers={marketData?.topMovers || []} />
+            </div>
+            
+            {/* Financial Calendar */}
+            <div className="rounded-3xl bg-white/90 dark:bg-neutral-900/90 backdrop-blur-md shadow-sm p-4 border border-white/20 dark:border-neutral-800/50">
+              <CalendarEvents 
+                earnings={marketData?.upcomingEarnings || []} 
+                dividends={marketData?.dividends || []} 
+                economic={marketData?.economicEvents || []}
+              />
+            </div>
+
+            {/* Market Sentiment */}
+            <div className="rounded-3xl bg-white/90 dark:bg-neutral-900/90 backdrop-blur-md shadow-sm p-4 border border-white/20 dark:border-neutral-800/50">
+              <MarketSentiment sentiment={marketData?.marketSentiment} />
+            </div>
+
+            {/* TradeIdeas is hidden for now - can be added back here later */}
+            {/* <div className="rounded-3xl ... ">
+              <TradeIdeas ideas={marketData?.tradeIdeas || []} />
+            </div> */}
           </div>
 
         </div>
@@ -145,7 +137,7 @@ const Home = () => {
             <Button
               variant="default"
               size="icon"
-              className="fixed bottom-4 right-4 h-14 w-14 rounded-full shadow-lg z-50 bg-primary hover:bg-primary/90"
+              className="fixed bottom-4 right-4 h-14 w-14 rounded-full shadow-lg z-50 bg-neutral-200 hover:bg-neutral-300 dark:bg-neutral-700 dark:hover:bg-neutral-600 text-neutral-900 dark:text-neutral-100"
               aria-label="Open Chat"
             >
               <MessageCircle className="h-6 w-6" />
@@ -154,13 +146,9 @@ const Home = () => {
           <Drawer.Portal>
             <Drawer.Overlay className="fixed inset-0 bg-black/40 z-[55]" />
             <Drawer.Content className="bg-neutral-100 dark:bg-neutral-950 flex flex-col rounded-t-[10px] h-[90%] mt-24 fixed bottom-0 left-0 right-0 z-[60]">
-              <div className="p-4 bg-neutral-100 dark:bg-neutral-950 rounded-t-[10px] flex-1">
-                {/* Handle to indicate draggable area */}
+              <div className="p-4 bg-neutral-100 dark:bg-neutral-950 rounded-t-[10px] h-full flex flex-col min-h-0">
                 <div className="mx-auto w-12 h-1.5 flex-shrink-0 rounded-full bg-neutral-300 dark:bg-neutral-700 mb-4" />
-                {/* Render ChatContainer inside the drawer content */}
-                <div className="flex-1 h-[calc(100%-2rem)]"> {/* Ensure ChatContainer fits */} 
-                  <ChatContainer />
-                </div>
+                <ChatContainer />
               </div>
             </Drawer.Content>
           </Drawer.Portal>

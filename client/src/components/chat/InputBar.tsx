@@ -1,4 +1,4 @@
-import { useState, KeyboardEvent } from 'react';
+import { useState, KeyboardEvent, useRef, useEffect } from 'react';
 import { ChevronDown, Send } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -31,6 +31,7 @@ const agents: Array<{
 
 export const InputBar = ({ onSend, onAgentChange, selectedAgent, isProcessing }: InputBarProps) => {
   const [input, setInput] = useState('');
+  const inputRef = useRef<HTMLInputElement>(null);
 
   const handleSend = () => {
     if (input.trim() && !isProcessing) {
@@ -38,6 +39,14 @@ export const InputBar = ({ onSend, onAgentChange, selectedAgent, isProcessing }:
       setInput('');
     }
   };
+
+  useEffect(() => {
+    if (!isProcessing) {
+      setTimeout(() => {
+         inputRef.current?.focus();
+      }, 50);
+    }
+  }, [isProcessing]);
 
   const handleKeyPress = (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -73,11 +82,12 @@ export const InputBar = ({ onSend, onAgentChange, selectedAgent, isProcessing }:
       </DropdownMenu>
 
       <input
+        ref={inputRef}
         type="text"
         value={input}
         onChange={(e) => setInput(e.target.value)}
         onKeyPress={handleKeyPress}
-        placeholder="Type a message or command..."
+        placeholder="Ask anything..."
         className="flex-1 bg-neutral-100 dark:bg-neutral-800 rounded-full px-4 py-2 text-sm outline-none placeholder:text-neutral-500 text-neutral-900 dark:text-neutral-100"
         disabled={isProcessing}
       />
