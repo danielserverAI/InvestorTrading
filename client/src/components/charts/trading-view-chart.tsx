@@ -375,7 +375,9 @@ export const TradingViewChart = ({
     // Update markers on the active series (should run even if type didn't change)
     const activeSeries = getActiveSeries();
     if (activeSeries) {
-      activeSeries.setMarkers(markers);
+      // Sort markers by time before setting them
+      const sortedMarkers = [...markers].sort((a, b) => (a.time as number) - (b.time as number));
+      activeSeries.setMarkers(sortedMarkers);
     }
 
   }, [chartType, chartData, isDarkMode, markers]); // Keep isDarkMode here for theme updates
