@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useLocation } from "wouter";
 import { useUser } from "@/context/user-context";
 import { useMarketData } from "@/hooks/use-market-data";
@@ -14,6 +14,7 @@ import CalendarEvents from "@/components/dashboard/calendar-events";
 import { ChartContainer } from "@/components/charts/chart-container";
 import { ChatContainer } from "@/components/chat/ChatContainer";
 import type { Stock } from "@/components/charts/chart-container";
+import type { ChartHandle } from "@/components/charts/trading-view-chart";
 import { Drawer } from "vaul";
 import { Button } from "@/components/ui/button";
 import { MessageCircle } from "lucide-react";
@@ -33,6 +34,7 @@ const Home = () => {
   const { activeView, setActiveView } = useCurrentView();
   const { isLoading, marketData } = useMarketData(activeView);
   const [searchQuery, setSearchQuery] = useState('');
+  const chartRef = useRef<ChartHandle>(null);
 
   useEffect(() => {
     if (!user) {
@@ -82,13 +84,13 @@ const Home = () => {
           {/* Chart Section */}
           <div className="lg:col-span-8 h-full"> {/* Added h-full back */} 
             <div className="rounded-3xl bg-white/90 dark:bg-neutral-900/90 backdrop-blur-md shadow-sm p-4 border border-white/20 dark:border-neutral-800/50 h-full"> {/* Removed max-h, Added h-full back */} 
-              <ChartContainer stocks={mockStocks} searchQuery={searchQuery} />
+              <ChartContainer ref={chartRef} stocks={mockStocks} searchQuery={searchQuery} />
             </div>
           </div>
           {/* Desktop Chat Interface (Hidden on mobile/medium) */}
           <div className="hidden lg:block lg:col-span-4 h-full"> {/* Changed md:block to lg:block */}
             <div className="rounded-3xl bg-white/90 dark:bg-neutral-900/90 backdrop-blur-md shadow-sm h-full border border-white/20 dark:border-neutral-800/50 flex"> 
-              <ChatContainer />
+              <ChatContainer chartRef={chartRef} />
             </div>
           </div>
 
@@ -148,7 +150,7 @@ const Home = () => {
             <Drawer.Content className="bg-neutral-100 dark:bg-neutral-950 flex flex-col rounded-t-[10px] h-[90%] mt-24 fixed bottom-0 left-0 right-0 z-[60]">
               <div className="p-4 bg-neutral-100 dark:bg-neutral-950 rounded-t-[10px] h-full flex flex-col min-h-0">
                 <div className="mx-auto w-12 h-1.5 flex-shrink-0 rounded-full bg-neutral-300 dark:bg-neutral-700 mb-4" />
-                <ChatContainer />
+                <ChatContainer chartRef={chartRef} />
               </div>
             </Drawer.Content>
           </Drawer.Portal>

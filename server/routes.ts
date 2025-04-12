@@ -7,6 +7,19 @@ import { ZodError } from "zod";
 import { fromZodError } from "zod-validation-error";
 import { processMessage } from "./chat";
 
+// --- OpenAI and dotenv imports ---
+import OpenAI from 'openai';
+import { ChatCompletionTool } from "openai/resources/index.mjs"; // Import Tool type
+import dotenv from 'dotenv';
+
+dotenv.config(); // Load environment variables from .env file
+
+// Initialize OpenAI client
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+});
+// --- End OpenAI setup ---
+
 import { DEFAULT_SAMPLE_MARKET_DATA } from "../client/src/lib/constants";
 
 // Sample market data for different times of day
@@ -552,17 +565,102 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   }
 
-  // Chat endpoint
+  // --- UPDATED Chat Endpoint (Intent Detection) ---
   app.post("/api/chat", async (req: Request, res: Response) => {
     try {
-      const { content, agent, tab } = req.body;
-      const response = await processMessage(content, agent, tab);
-      res.json({ success: true, response });
+      const { content } = req.body as { content: string; };
+
+      if (!content) {
+        return res.status(400).json({ success: false, error: "Missing content in request body" });
+      }
+
+      const tools: ChatCompletionTool[] = [
+        {
+          type: "function",
+          function: {
+            name: "request_chart_analysis",
+            description: "Call this function if the user asks a question that requires analyzing the currently displayed financial chart data (e.g., asking about trends, patterns, technical indicators, support/resistance, price action on the chart). Do not call if the user is asking for general information or definitions.",
+            parameters: { type: "object", properties: {}, },
+          },
+        },
+      ];
+
+      const response = await openai.chat.completions.create({
+        model: "gpt-3.5-turbo",
+        messages: [
+          { role: "system", content: "You are a helpful assistant. You have access to a financial chart. Use the 'request_chart_analysis' function if the user's query requires analyzing the chart data." },
+          { role: "user", content: content },
+        ],
+        tools: tools,
+        tool_choice: "auto",
+      });
+
+      const responseMessage = response.choices[0].message;
+
+      if (responseMessage.tool_calls && responseMessage.tool_calls[0]?.function?.name === 'request_chart_analysis') {
+        console.log("OpenAI requested chart analysis function call.");
+        return res.json({
+          success: true,
+          actionRequired: 'get_chart_context',
+          followUpQuery: content,
+        });
+      } else {
+        console.log("OpenAI did not request function call, returning text response.");
+        const textResponse = responseMessage.content;
+        return res.json({
+          success: true,
+          response: textResponse || "Sorry, I couldn't process that request.",
+        });
+      }
+
     } catch (error) {
       console.error("Chat processing error:", error);
-      res.status(400).json({ 
-        success: false, 
-        error: error instanceof Error ? error.message : "Unknown error" 
+      res.status(500).json({
+        success: false,
+        error: error instanceof Error ? error.message : "Unknown error processing chat message"
+      });
+    }
+  });
+
+  // --- UPDATED Execute Analysis Endpoint ---
+  app.post("/api/execute-chart-analysis", async (req: Request, res: Response) => {
+    try {
+      const { chartContext, originalQuery } = req.body as {
+        chartContext: any;
+        originalQuery: string;
+      };
+
+      if (!chartContext || !originalQuery) {
+        return res.status(400).json({ success: false, error: "Missing chartContext or originalQuery" });
+      }
+
+      console.log(`Executing analysis for query: "${originalQuery}"...`);
+
+      const systemPrompt = "You are a helpful financial analyst assistant. Analyze the provided chart data and user query, providing concise and relevant insights based on the information given.";
+      const userPrompt = `Analyze the following chart data for ${chartContext.symbol} (${chartContext.interval}):\n\nData points (sample): ${JSON.stringify(chartContext.chartData?.slice(0, 5))}... (${chartContext.chartData?.length} total points)\nMarkers: ${JSON.stringify(chartContext.markers)}\n\nUser Query: ${originalQuery}`;
+
+      const chatCompletion = await openai.chat.completions.create({
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userPrompt },
+        ],
+        model: "gpt-3.5-turbo",
+      });
+
+      const analysis = chatCompletion.choices[0]?.message?.content;
+
+      if (!analysis) {
+        throw new Error("OpenAI did not return a valid analysis for execution.");
+      }
+
+      console.log("Received final analysis from OpenAI.");
+      res.json({ success: true, response: analysis });
+
+    } catch (error) {
+      console.error("Chart analysis execution error:", error);
+      res.status(500).json({
+        success: false,
+        error: error instanceof Error ? error.message : "Unknown error executing chart analysis"
       });
     }
   });

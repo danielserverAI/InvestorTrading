@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useState, useCallback, forwardRef, useImperativeHandle } from 'react';
 import { createChart, IChartApi, ISeriesApi, CandlestickData, Time, CrosshairMode, LineWidth, MouseEventParams, SeriesMarker, LineData, SeriesType, SingleValueData, BarData, TickMarkType, SeriesDataItemTypeMap, PriceFormat, PriceFormatBuiltIn, SeriesMarkerPosition, SeriesMarkerShape } from 'lightweight-charts';
 import type { LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -28,6 +28,16 @@ interface TradingViewChartProps {
   onKeyPointDetected?: (point: { time: number; price: number }) => void;
   selectedActionConfig?: ActionConfig; // Add selectedActionConfig prop
   chartType: 'candles' | 'line' | 'bars' | 'area' | 'baseline';
+}
+
+// Add type for exposed handle
+export interface ChartHandle {
+  getChartContext: () => {
+    symbol: string;
+    interval: string;
+    chartData: (CandlestickData<Time> | BarData<Time>)[];
+    markers: SeriesMarker<Time>[];
+  };
 }
 
 // Mock function to simulate fetching data for different intervals
@@ -111,13 +121,16 @@ const fetchIntervalData = (symbol: string, interval: string): CandlestickData<Ti
   return data.sort((a, b) => (a.time as number) - (b.time as number));
 };
 
-export const TradingViewChart = ({ 
+// Wrap component with forwardRef
+export const TradingViewChart = forwardRef<ChartHandle, TradingViewChartProps>(({ 
   symbol, 
   interval,
   onKeyPointDetected,
   selectedActionConfig, // Receive action config
   chartType = 'candles'
-}: TradingViewChartProps) => {
+}, ref) => { // Add ref parameter here
+
+  // *** ALL COMPONENT LOGIC MOVED INSIDE forwardRef ***
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
   const candleSeriesRef = useRef<ISeriesApi<'Candlestick'> | null>(null);
@@ -129,6 +142,16 @@ export const TradingViewChart = ({
   const [selectedPoints, setSelectedPoints] = useState<Set<number>>(new Set());
   const [chartData, setChartData] = useState<(CandlestickData<Time> | BarData<Time>)[]>([]);
   const [markers, setMarkers] = useState<SeriesMarker<Time>[]>([]);
+
+  // Expose getChartContext via ref
+  useImperativeHandle(ref, () => ({
+    getChartContext: () => ({
+      symbol,
+      interval,
+      chartData,
+      markers,
+    })
+  }), [symbol, interval, chartData, markers]); // Dependencies for the exposed data
 
   // Reset selections and markers when symbol or interval changes
   useEffect(() => {
@@ -444,6 +467,7 @@ export const TradingViewChart = ({
     };
   }, [handleClick]); // Add handleClick dependency
 
+  // *** RETURN JSX AT THE END OF THE forwardRef FUNCTION ***
   return (
     <div className="w-full h-full relative"> 
       <div 
@@ -458,4 +482,8 @@ export const TradingViewChart = ({
       </div>
     </div>
   );
-}; 
+
+}); // Close forwardRef
+
+// Add display name for DevTools
+TradingViewChart.displayName = 'TradingViewChart'; 

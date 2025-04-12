@@ -1,0 +1,5 @@
+* [32mAI-integration       [m 2cd8e2a Fix: Sort markers by time before setting on chart
+  chart-selector       [m 0c3fb16 [[34morigin/chart-selector[m] feat: Implement consolidated actions dropdown and marker functionality
+  feature/major-changes[m 07c16d2 [[34morigin/feature/major-changes[m] feat: Implement major changes including chat interface, agent system, and command system foundation
+  main                 [m 93db7b0 [[34morigin/main[m] feat: Implement Intelligent News Engine with categorization and analysis features
+  new-interface        [m 2cd8e2a [[34morigin/new-interface[m] Fix: Sort markers by time before setting on chart

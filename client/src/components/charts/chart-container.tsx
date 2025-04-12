@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, forwardRef } from 'react';
 import { 
   ChevronLeft, ChevronRight, MousePointer2, X, 
   CandlestickChart, BarChart3, LineChart, TrendingUp, Activity, 
@@ -8,7 +8,7 @@ import type { LucideIcon } from 'lucide-react'; // Import LucideIcon type
 import { Button } from '@/components/ui/button';
 // Removed Input import as it's commented out later
 // import { Input } from '@/components/ui/input'; 
-import { TradingViewChart, ActionConfig as BaseMarkerConfig } from './trading-view-chart'; // Import ActionConfig as BaseMarkerConfig
+import { TradingViewChart, ActionConfig as BaseMarkerConfig, ChartHandle } from './trading-view-chart'; // Import ChartHandle
 import { cn } from '@/lib/utils';
 import {
   DropdownMenu,
@@ -47,11 +47,12 @@ interface ChartContainerProps {
   searchQuery?: string;
 }
 
-export const ChartContainer = ({ 
+// Wrap with forwardRef
+export const ChartContainer = forwardRef<ChartHandle, ChartContainerProps>(({ 
   stocks,
   initialCategory = 'portfolio',
   searchQuery = ''
-}: ChartContainerProps) => {
+}, ref) => { // Add ref parameter
   const [currentCategory, setCurrentCategory] = useState(initialCategory);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [currentInterval, setCurrentInterval] = useState('1D');
@@ -132,6 +133,7 @@ export const ChartContainer = ({
           <div className="relative flex-1 overflow-hidden">
             {currentStock ? (
               <TradingViewChart 
+                ref={ref} // Pass ref down
                 key={`${currentStock.symbol}-${currentInterval}`}
                 symbol={currentStock.symbol}
                 interval={currentInterval}
@@ -268,4 +270,7 @@ export const ChartContainer = ({
       </div>
     </TooltipProvider>
   );
-}; 
+}); // Close forwardRef
+
+// Add display name for DevTools
+ChartContainer.displayName = 'ChartContainer'; 

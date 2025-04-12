@@ -1,6 +1,6 @@
 export type TabType = 'chat' | 'news' | 'market-movers' | 'ai-ideas' | 'sentiment' | 'calendar';
 
-export type AgentType = 'auto' | 'technical' | 'news' | 'sentiment' | 'portfolio' | 'patterns';
+export type AgentType = 'auto' | 'technical' | 'news' | 'sentiment' | 'portfolio' | 'patterns' | 'system';
 
 export interface Message {
   id: string;
@@ -11,6 +11,13 @@ export interface Message {
   metadata?: {
     command?: string;
     context?: any;
+    analysisRequest?: {
+      symbol: string;
+      interval: string;
+      query?: string;
+    };
+    error?: boolean | string;
+    [key: string]: any;
   };
 }
 
