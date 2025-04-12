@@ -386,6 +386,32 @@ export const sampleMarketData = {
   }
 };
 
+// Define types from lightweight-charts if not already shared
+// These might need adjustment based on the actual library version/usage
+interface TimeScaleVisibleRange {
+  from: number; // Assuming Time is represented as a number (timestamp)
+  to: number;
+}
+
+interface ChartDataPoint {
+  time: number;
+  open?: number;
+  high?: number;
+  low?: number;
+  close?: number;
+  value?: number; // For line/area charts
+}
+
+interface SeriesMarkerInfo {
+    time: number;
+    position: string; // 'aboveBar' | 'belowBar' | 'inBar'
+    color: string;
+    shape: string; // 'arrowUp' | 'arrowDown' | 'circle' | 'square'
+    text?: string; // Optional text from marker
+    // id?: string | number; // Optional internal ID
+    // size?: number; // Optional size
+}
+
 export async function registerRoutes(app: Express): Promise<Server> {
   // API Routes
   app.get("/api/users/me", async (req: Request, res: Response) => {
@@ -625,34 +651,69 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // --- UPDATED Execute Analysis Endpoint ---
   app.post("/api/execute-chart-analysis", async (req: Request, res: Response) => {
     try {
-      const { chartContext, originalQuery } = req.body as {
-        chartContext: any;
+      const { chartContext, originalQuery, visibleRange } = req.body as {
+        chartContext: { 
+            symbol: string;
+            interval: string;
+            chartData: ChartDataPoint[]; // Use defined type
+            markers: SeriesMarkerInfo[]; // Use defined type
+            selectedPoints: number[];
+        };
         originalQuery: string;
+        visibleRange: TimeScaleVisibleRange | null; // Expect visible range
       };
 
-      if (!chartContext || !originalQuery) {
-        return res.status(400).json({ success: false, error: "Missing chartContext or originalQuery" });
+      if (!chartContext || !originalQuery || !visibleRange) {
+         return res.status(400).json({ success: false, error: "Missing chartContext, originalQuery, or visibleRange" });
       }
 
       console.log(`Executing analysis for query: "${originalQuery}"...`);
 
-      const systemPrompt = "You are a helpful financial analyst assistant. Analyze the provided chart data and user query, providing concise and relevant insights based on the information given.";
-      const userPrompt = `Analyze the following chart data for ${chartContext.symbol} (${chartContext.interval}):\n\nData points (sample): ${JSON.stringify(chartContext.chartData?.slice(0, 5))}... (${chartContext.chartData?.length} total points)\nMarkers: ${JSON.stringify(chartContext.markers)}\n\nUser Query: ${originalQuery}`;
+      // --- Filter Data based on Visible Range --- 
+      const filteredData = chartContext.chartData.filter(point => 
+          point.time >= visibleRange.from && point.time <= visibleRange.to
+      );
+      console.log(`Filtered data points: ${filteredData.length} (from original ${chartContext.chartData.length})`);
 
+      // --- Define Marker Legend --- 
+      const markerLegend = `Marker Legend: 
+- shape:'arrowUp', color:'#26a69a' = User-placed Buy Signal
+- shape:'arrowDown', color:'#ef5350' = User-placed Sell Signal
+- shape:'circle', color:'#FFA726' = User Highlight
+- shape:'square', color:'#a855f7' = User Event Marker`;
+
+      // --- Construct Prompts --- 
+      const systemPrompt = `You are a helpful financial analyst assistant. Analyze the provided chart data and user query, providing concise and relevant insights based on the information given. Pay close attention to any user-placed markers or selected points, as they indicate areas of interest for the user. 
+${markerLegend}`;
+      
+      const userPrompt = `Analyze the following chart data for ${chartContext.symbol} (${chartContext.interval}) within the user's visible time range:
+
+Visible Data Points: ${JSON.stringify(filteredData)} 
+User-placed Markers (within full dataset): ${JSON.stringify(chartContext.markers)}
+User-selected Points (timestamps): ${JSON.stringify(chartContext.selectedPoints || [])} 
+
+User Query: ${originalQuery}`;
+
+      // Limit prompt length if needed (simple example)
+      const maxPromptLength = 15000; // Adjust based on model limits (e.g., gpt-3.5-turbo-16k has 16k tokens)
+      const finalUserPrompt = userPrompt.length > maxPromptLength ? userPrompt.substring(0, maxPromptLength) + "... [prompt truncated]" : userPrompt;
+      if (userPrompt.length > maxPromptLength) {
+          console.warn("Prompt truncated due to length limit.");
+      }
+
+      // ... OpenAI call ...
       const chatCompletion = await openai.chat.completions.create({
         messages: [
           { role: "system", content: systemPrompt },
-          { role: "user", content: userPrompt },
+          { role: "user", content: finalUserPrompt }, // Use potentially truncated prompt
         ],
-        model: "gpt-3.5-turbo",
+        model: "gpt-3.5-turbo", // Consider gpt-3.5-turbo-16k or gpt-4 if needed
       });
-
+      // ... rest of the handler ...
       const analysis = chatCompletion.choices[0]?.message?.content;
-
       if (!analysis) {
         throw new Error("OpenAI did not return a valid analysis for execution.");
       }
-
       console.log("Received final analysis from OpenAI.");
       res.json({ success: true, response: analysis });
 

@@ -64,13 +64,26 @@ export const ChatContainer = ({ chartRef }: ChatContainerProps) => {
     }
 
     try {
+      // Get both context and visible range
       const chartContext = chartRef.current.getChartContext();
-      addSystemMessage(`Fetching analysis for "${originalQuery}"...`, 'system');
+      const visibleRange = chartRef.current.getVisibleRange();
+
+      if (!visibleRange) {
+          addSystemMessage('Error: Could not get visible chart range.');
+          toast({ title: 'Error', description: 'Could not get visible chart range.', variant: 'destructive' });
+          return;
+      }
+      
+      addSystemMessage(`Fetching analysis for "${originalQuery}"... (Visible range: ${new Date((visibleRange.from as number)*1000).toLocaleDateString()} - ${new Date((visibleRange.to as number)*1000).toLocaleDateString()})`, 'system');
 
       const analysisResponse = await fetch('/api/execute-chart-analysis', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ chartContext, originalQuery })
+        body: JSON.stringify({ 
+            chartContext, 
+            originalQuery, 
+            visibleRange // Send visible range to backend
+        })
       });
 
       const analysisData = await analysisResponse.json();
