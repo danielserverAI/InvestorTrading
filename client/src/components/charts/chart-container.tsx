@@ -17,6 +17,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Time } from 'lightweight-charts'; // Import Time type
 
 export interface Stock {
   symbol: string;
@@ -90,6 +91,13 @@ export const ChartContainer = forwardRef<ChartHandle, ChartContainerProps>(({
     setCurrentIndex(0);
   };
 
+  // Handler for changing interval ONLY
+  const handleIntervalChange = (interval: string) => {
+    console.log(`[ChartContainer] Interval changed to: ${interval}`); // Keep log for basic feedback
+    setCurrentInterval(interval);
+    // REMOVED: Calculation and setVisibleRange call
+  };
+
   return (
     <TooltipProvider> 
       <div className="flex flex-col w-full h-full bg-transparent">
@@ -156,7 +164,7 @@ export const ChartContainer = forwardRef<ChartHandle, ChartContainerProps>(({
                 {intervals.map((interval) => (
                   <button
                     key={interval}
-                    onClick={() => setCurrentInterval(interval)}
+                    onClick={() => handleIntervalChange(interval)}
                     className={cn(
                       'rounded-full px-2.5 py-1 text-xs font-medium transition-colors',
                       currentInterval === interval

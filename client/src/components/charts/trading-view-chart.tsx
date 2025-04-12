@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useCallback, forwardRef, useImperativeHandle } from 'react';
-import { createChart, IChartApi, ISeriesApi, CandlestickData, Time, CrosshairMode, LineWidth, MouseEventParams, SeriesMarker, LineData, SeriesType, SingleValueData, BarData, TickMarkType, SeriesDataItemTypeMap, PriceFormat, PriceFormatBuiltIn, SeriesMarkerPosition, SeriesMarkerShape } from 'lightweight-charts';
+import { createChart, IChartApi, ISeriesApi, CandlestickData, Time, CrosshairMode, LineWidth, MouseEventParams, SeriesMarker, LineData, SeriesType, SingleValueData, BarData, TickMarkType, SeriesDataItemTypeMap, PriceFormat, PriceFormatBuiltIn, SeriesMarkerPosition, SeriesMarkerShape, LogicalRange } from 'lightweight-charts';
 import type { LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -37,73 +37,92 @@ export interface ChartHandle {
     interval: string;
     chartData: (CandlestickData<Time> | BarData<Time>)[];
     markers: SeriesMarker<Time>[];
+    selectedPoints: Set<number>;
   };
+  // Add method to set visible range
+  setVisibleRange: (range: { from: Time, to: Time }) => void;
+  // Add method to get visible range (needed for context enhancement later)
+  getVisibleRange: () => { from: Time, to: Time } | null;
 }
 
-// Mock function to simulate fetching data for different intervals
-const fetchIntervalData = (symbol: string, interval: string): CandlestickData<Time>[] => {
-  console.log(`Fetching ${interval} data for ${symbol}`); // Simulate API call
+// Mock function to simulate fetching data for different intervals/ranges
+const fetchIntervalData = (symbol: string, rangeSelection: string): CandlestickData<Time>[] => {
+  console.log(`Fetching data for ${symbol}, range: ${rangeSelection}`); 
   const data: CandlestickData<Time>[] = [];
-  let days = 100;
+  let numDataPoints = 100;
   let startDate = new Date();
-  let multiplier = 1; // Daily by default
+  let intervalMinutes = 24 * 60; // Default to daily candles (minutes per candle)
 
-  switch (interval) {
+  switch (rangeSelection) {
+    case '1D':
+      numDataPoints = (24 * 60) / 10; // ~144 10-minute candles for 1 day
+      intervalMinutes = 10; 
+      startDate.setDate(startDate.getDate() - 1); // Start data generation from 1 day ago
+      break;
     case '1W':
-      days = 52; // Roughly 52 weeks in a year
-      multiplier = 7;
+      numDataPoints = (7 * 24); // ~168 1-hour candles for 1 week
+      intervalMinutes = 60;
+      startDate.setDate(startDate.getDate() - 7); // Start data generation from 1 week ago
       break;
     case '1M':
-      days = 12 * 3; // 3 years of monthly data
-      multiplier = 30; // Approximate days in a month
+      numDataPoints = 30; // ~30 daily candles for 1 month
+      intervalMinutes = 24 * 60;
+      startDate.setMonth(startDate.getMonth() - 1); // Start data generation from 1 month ago
       break;
     case '1Y':
-      days = 10; // 10 years of yearly data
-      multiplier = 365;
+      numDataPoints = 52; // ~52 weekly candles for 1 year
+      intervalMinutes = 7 * 24 * 60;
+      startDate.setFullYear(startDate.getFullYear() - 1); // Start data generation from 1 year ago
       break;
-    case '1D':
-    default:
-      days = 100; // 100 days of daily data
-      multiplier = 1;
+    default: // Default might fetch e.g. 100 daily points 
+       numDataPoints = 100;
+       intervalMinutes = 24 * 60;
+       startDate.setDate(startDate.getDate() - numDataPoints);
       break;
   }
 
   const basePrice = (symbol.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) % 100) + 100;
   let currentPrice = basePrice;
-  let volatility = 2;
+  let volatility = (intervalMinutes / (24 * 60)) * 2 + 0.5; // Adjust volatility based on interval
   let trend = 0;
   const symbolSeed = symbol.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
   const seededRandom = (seedOffset: number) => {
     const x = Math.sin(symbolSeed + seedOffset) * 10000;
     return x - Math.floor(x);
   };
+  
+  const endDate = new Date(); // Generate up to now
 
-  for (let i = days; i >= 0; i--) {
-    const date = new Date(startDate);
-    date.setDate(date.getDate() - (i * multiplier));
-    
-    // Skip weekends for daily data only (can be refined for other intervals)
-    if (interval === '1D' && (date.getDay() === 0 || date.getDay() === 6)) continue;
+  for (let i = numDataPoints -1; i >= 0; i--) {
+    // Calculate timestamp for this data point
+    const pointDate = new Date(endDate.getTime() - i * intervalMinutes * 60 * 1000);
+    const timestamp = Math.floor(pointDate.getTime() / 1000);
 
-    const seedOffset = i * multiplier; // Use a consistent offset for seeding
+    // Skip weekends only if generating daily or higher frequency data that might fall on one
+    if (intervalMinutes >= 24 * 60 && (pointDate.getDay() === 0 || pointDate.getDay() === 6)) continue;
+    // Skip non-market hours for intraday (simplistic example)
+    if (intervalMinutes < 24*60 && (pointDate.getHours() < 9 || pointDate.getHours() >= 17)) continue;
 
-    if (i % 20 === 0) { // Adjust trend/volatility less frequently for longer intervals
-      trend = Math.floor(seededRandom(seedOffset) * 3) - 1;
-      volatility = 1.5 + seededRandom(seedOffset) * 2;
+    const seedOffset = timestamp; // Use timestamp for seeding
+
+    // Adjust trend/volatility (maybe less often for smaller intervals?)
+    if (i % (Math.max(1, Math.floor(numDataPoints / 10))) === 0) { 
+      trend = (seededRandom(seedOffset) - 0.5) * 0.5; // Smaller trend adjustments
+      volatility = (0.5 + seededRandom(seedOffset + 1) * 1.5) * (intervalMinutes / (24 * 60) * 2 + 0.5);
     }
 
-    const trendBias = trend * 0.3;
-    const changePercent = (seededRandom(seedOffset) - 0.5 + trendBias) * volatility;
+    const trendBias = trend * (intervalMinutes / (24*60)); // Bias less influential on smaller intervals
+    const changePercent = (seededRandom(seedOffset + 2) - 0.5 + trendBias) * volatility;
     const open = currentPrice;
-    const close = open * (1 + changePercent / 100);
+    let close = open * (1 + changePercent / 100);
+    close = Math.max(close, 0.01); // Ensure price doesn't go negative
     
     const range = Math.abs(close - open);
-    const highExtra = range * (0.2 + seededRandom(seedOffset + 1) * 0.3);
-    const lowExtra = range * (0.2 + seededRandom(seedOffset + 2) * 0.3);
+    const highExtra = range * (0.1 + seededRandom(seedOffset + 3) * 0.2);
+    const lowExtra = range * (0.1 + seededRandom(seedOffset + 4) * 0.2);
     
     const high = Math.max(open, close) + highExtra;
-    const low = Math.min(open, close) - lowExtra;
-    const timestamp = date.getTime() / 1000;
+    const low = Math.max(0.01, Math.min(open, close) - lowExtra); // Ensure low doesn't go negative
 
     if (!isNaN(timestamp)) {
       data.push({
@@ -117,8 +136,8 @@ const fetchIntervalData = (symbol: string, interval: string): CandlestickData<Ti
 
     currentPrice = close;
   }
-  // Sort data just in case (timestamps might not be perfectly sequential)
-  return data.sort((a, b) => (a.time as number) - (b.time as number));
+  // Data is generated chronologically, no need to sort
+  return data;
 };
 
 // Wrap component with forwardRef
@@ -150,8 +169,24 @@ export const TradingViewChart = forwardRef<ChartHandle, TradingViewChartProps>((
       interval,
       chartData,
       markers,
-    })
-  }), [symbol, interval, chartData, markers]); // Dependencies for the exposed data
+      selectedPoints,
+    }),
+    setVisibleRange: (range: { from: Time, to: Time }) => {
+      chartRef.current?.timeScale().setVisibleRange(range);
+    },
+    getVisibleRange: () => {
+       // Ensure chart and timeScale exist
+      const timeScale = chartRef.current?.timeScale();
+      if (!timeScale) return null;
+      // Check if getVisibleRange exists and is callable
+      if (typeof timeScale.getVisibleRange === 'function') {
+          return timeScale.getVisibleRange();
+      } 
+      // Add a fallback or log warning if method doesn't exist (older lib version?)
+      console.warn("getVisibleRange method not available on timeScale");
+      return null; 
+    }
+  }), [symbol, interval, chartData, markers, selectedPoints]); // Dependencies for the exposed data
 
   // Reset selections and markers when symbol or interval changes
   useEffect(() => {
@@ -199,7 +234,7 @@ export const TradingViewChart = forwardRef<ChartHandle, TradingViewChartProps>((
     }
   }, [chartType]);
 
-  // THIS EFFECT HANDLES CHART CREATION & INITIAL SERIES
+  // THIS EFFECT HANDLES CHART CREATION & INITIAL SERIES & VISIBLE RANGE
   useEffect(() => {
     if (!chartContainerRef.current || !chartData || chartData.length === 0) return;
 
@@ -260,7 +295,6 @@ export const TradingViewChart = forwardRef<ChartHandle, TradingViewChartProps>((
       priceLineStyle: 2, // Dashed
     };
 
-    // Add initial series based on chartType prop
     switch (chartType) {
       case 'candles':
         candleSeriesRef.current = chartRef.current.addCandlestickSeries({
@@ -296,13 +330,38 @@ export const TradingViewChart = forwardRef<ChartHandle, TradingViewChartProps>((
     }
     // --- END INITIAL SERIES CREATION --- 
 
-    // Fit content initially
-    chartRef.current.timeScale().fitContent();
+    // --- SET VISIBLE RANGE BASED ON INTERVAL ---
+    const now = new Date();
+    let fromDate = new Date(now); 
+
+    switch (interval) {
+      case '1D':
+        fromDate.setDate(now.getDate() - 1);
+        break;
+      case '1W':
+        fromDate.setDate(now.getDate() - 7);
+        break;
+      case '1M':
+        fromDate.setMonth(now.getMonth() - 1);
+        break;
+      case '1Y':
+        fromDate.setFullYear(now.getFullYear() - 1);
+        break;
+      default: // Default zoom if interval is not recognized (e.g., initial load?)
+        fromDate.setMonth(now.getMonth() - 3);
+        break;
+    }
+
+    const fromTimestamp = Math.floor(fromDate.getTime() / 1000) as Time;
+    const toTimestamp = Math.floor(now.getTime() / 1000) as Time;
+
+    console.log(`[TradingViewChart useEffect] Setting visible range for ${interval}:`, { from: fromTimestamp, to: toTimestamp });
+    chartRef.current.timeScale().setVisibleRange({ from: fromTimestamp, to: toTimestamp });
+    // --- END SET VISIBLE RANGE --- 
 
     // Add resize observer
     const handleResize = () => {
         if (chartContainerRef.current && chartRef.current) {
-            // Apply both width and height
             chartRef.current.applyOptions({
               width: chartContainerRef.current.clientWidth,
               height: chartContainerRef.current.clientHeight
@@ -317,15 +376,13 @@ export const TradingViewChart = forwardRef<ChartHandle, TradingViewChartProps>((
         resizeObserver.disconnect();
         chartRef.current?.remove();
         chartRef.current = null;
-        // Clear series refs on cleanup
         candleSeriesRef.current = null;
         lineSeriesRef.current = null;
         barSeriesRef.current = null;
         areaSeriesRef.current = null;
         baselineSeriesRef.current = null;
     };
-    // DEPENDENCIES: Now depends on data and type for initial setup
-  }, [chartData, chartType, symbol, interval]); 
+  }, [chartData, chartType, symbol, interval]); // Keep dependencies
 
 
   // THIS EFFECT HANDLES CHART TYPE *UPDATES* and MARKERS
