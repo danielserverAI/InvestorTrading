@@ -637,9 +637,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (output?.type === 'function_call' && output.name === 'get_current_chart_analysis') {
         // Function call requested
         console.log("Responses API requested chart analysis function call.");
-        // *** Log the arguments the model generated ***
-        console.log("Function Call Arguments Received:", output.arguments);
-        // *** End Logging ***
         return res.json({
           success: true,
           actionRequired: 'get_chart_context',
@@ -768,14 +765,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       ];
 
-      // *** Add Logging Here ***
-      console.log("--- Submitting Tool Result to OpenAI ---");
-      console.log("Tool Result Payload Length:", toolResultPayload.length);
-      console.log("Final Payload (truncated?", toolResultPayload.length > maxPayloadLength, "):", finalToolResultPayload);
-      console.log("Sending Input Array:", JSON.stringify(new_input, null, 2));
-      console.log("Sending Tools:", JSON.stringify(tools, null, 2));
-      // *** End Logging ***
-
       // --- Call /v1/responses again with tool result ---
       const response = await openai.responses.create({
         model: "gpt-4o",
@@ -783,11 +772,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         tools: tools, 
         store: true, 
       });
-
-      // *** Log the entire response object received after submitting tool result ***
-      console.log("--- Received Response from OpenAI After Tool Submission ---");
-      console.log(JSON.stringify(response, null, 2));
-      // *** End Logging ***
 
       // Process the final response
       const output = response.output?.[0];

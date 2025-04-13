@@ -13,6 +13,7 @@ const initialState: ChatState = {
   selectedAgent: 'auto',
   inputValue: '',
   isProcessing: false,
+  lastResponseId: null,
 };
 
 interface ChatContainerProps {
@@ -41,7 +42,11 @@ export const ChatContainer = ({ chartRef }: ChatContainerProps) => {
   };
 
   // Add system response message function
-  const addSystemMessage = (content: string, agent: AgentType = 'system') => {
+  const addSystemMessage = (
+    content: string, 
+    agent: AgentType = 'system', 
+    responseId: string | null = null
+  ) => {
     const systemMessage: Message = {
       id: nanoid(),
       type: 'system',
@@ -52,6 +57,7 @@ export const ChatContainer = ({ chartRef }: ChatContainerProps) => {
     setState((prev) => ({
       ...prev,
       messages: [...prev.messages, systemMessage],
+      lastResponseId: responseId ?? prev.lastResponseId,
     }));
   };
 
@@ -59,15 +65,14 @@ export const ChatContainer = ({ chartRef }: ChatContainerProps) => {
   const executeChartAnalysis = useCallback(async (
     originalQuery: string, 
     toolCallId: string, 
-    toolCall: any, // The original function_call object from the API
-    originalInput: any[], // The original input array sent to /api/chat
-    retryCount = 0 // Add retry count for loop prevention
+    toolCall: any,
+    originalInput: any[],
+    retryCount = 0
   ) => {
-    const MAX_RETRIES = 2; // Prevent infinite loops
+    const MAX_RETRIES = 2;
     if (retryCount > MAX_RETRIES) {
         addSystemMessage("Error: AI seems stuck requesting chart data repeatedly. Please try rephrasing.", 'system');
         toast({ title: 'Error', description: 'AI stuck in analysis loop.', variant: 'destructive' });
-        // Ensure processing state is reset if we bail out here
         setState((prev) => ({ ...prev, isProcessing: false })); 
         return; 
     }
@@ -75,23 +80,19 @@ export const ChatContainer = ({ chartRef }: ChatContainerProps) => {
     if (!chartRef?.current) {
       addSystemMessage('Error: Chart reference is not available.');
       toast({ title: 'Error', description: 'Chart reference is not available.', variant: 'destructive' });
-      // Ensure processing state is reset on error
       setState((prev) => ({ ...prev, isProcessing: false })); 
       return;
     }
 
     try {
-      // Get chart context 
       const chartContext = chartRef.current.getChartContext();
             
-      // Only add the "Submitting..." message on the first attempt
       if (retryCount === 0) {
           addSystemMessage(`Submitting chart data for analysis of "${originalQuery}"...`, 'system');
       } else {
           addSystemMessage(`Re-submitting chart data (attempt ${retryCount + 1})...`, 'system');
       }
 
-      // Call the NEW endpoint to submit context and tool call info
       const analysisResponse = await fetch('/api/submit-chart-context', { 
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -110,24 +111,19 @@ export const ChatContainer = ({ chartRef }: ChatContainerProps) => {
         throw new Error(analysisData.error || `API request failed with status ${analysisResponse.status}`);
       }
 
-      // *** HANDLE RESPONSE FROM SUBMIT ENDPOINT ***
       if (analysisData.actionRequired === 'get_chart_context') {
-        // If the model asks for context AGAIN, call recursively with new data
         console.log(`[executeChartAnalysis] Received request for chart context AGAIN (Retry ${retryCount + 1}).`);
         await executeChartAnalysis(
-          analysisData.followUpQuery, // Use potentially updated query if backend modifies it
-          analysisData.toolCallId,    // Use the NEW toolCallId
-          analysisData.toolCall,      // Use the NEW toolCall object
-          originalInput,              // Original input usually stays the same, unless modified by backend logic
-          retryCount + 1              // Increment retry count
+          analysisData.followUpQuery, 
+          analysisData.toolCallId,    
+          analysisData.toolCall,      
+          originalInput,             
+          retryCount + 1              
         );
       } else if (analysisData.response) {
-        // If we got a final text response
         console.log("[executeChartAnalysis] Received final text response.");
-        addSystemMessage(analysisData.response, 'auto'); 
-        // Final success, ensure processing is set to false in the calling function's finally block
+        addSystemMessage(analysisData.response, 'auto', analysisData.responseId); 
       } else {
-         // Unexpected response structure from /api/submit-chart-context
          throw new Error("Received unexpected data structure after submitting chart context.");
       }
 
@@ -136,12 +132,9 @@ export const ChatContainer = ({ chartRef }: ChatContainerProps) => {
       const errorMsg = error instanceof Error ? error.message : 'Failed to submit chart analysis';
       addSystemMessage(`Error submitting analysis: ${errorMsg}`, 'system');
       toast({ title: 'Analysis Submission Error', description: errorMsg, variant: 'destructive' });
-      // Ensure processing state is reset on error
       setState((prev) => ({ ...prev, isProcessing: false })); 
     }
-    // Do not reset isProcessing here, let the calling function's finally block handle it
-    // unless it's a final error state like MAX_RETRIES or chartRef error.
-  }, [chartRef, toast]); // Removed setState from dependencies as it's handled carefully
+  }, [chartRef, toast]);
 
   const handleTabChange = (tab: TabType) => {
     setState((prev) => ({ ...prev, activeTab: tab }));
@@ -151,12 +144,9 @@ export const ChatContainer = ({ chartRef }: ChatContainerProps) => {
   const handleAnalyzeChart = useCallback(async () => {
     if (state.isProcessing) return;
     console.log("[handleAnalyzeChart] Button clicked.");
-
     const predefinedQuery = "Analyze the current chart.";
-    setState((prev) => ({ ...prev, isProcessing: true }));
+    setState((prev) => ({ ...prev, isProcessing: true, lastResponseId: null }));
     addSystemMessage(`Requesting analysis: "${predefinedQuery}"`, 'system');
-    
-    // Construct the input message as sent to the API
     const inputMessageForApi = {
       role: 'user',
       content: [{ type: 'input_text', text: predefinedQuery } as const]
@@ -166,7 +156,7 @@ export const ChatContainer = ({ chartRef }: ChatContainerProps) => {
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content: predefinedQuery }) // Send simple string here
+        body: JSON.stringify({ content: predefinedQuery, previous_response_id: null }) 
       });
       const data = await response.json();
 
@@ -176,17 +166,17 @@ export const ChatContainer = ({ chartRef }: ChatContainerProps) => {
 
       if (data.actionRequired === 'get_chart_context') {
         console.log("[handleAnalyzeChart] Received request for chart context.");
-        // Call executeChartAnalysis with the required data
+        setState(prev => ({ ...prev, lastResponseId: data.responseId }));
         await executeChartAnalysis(
           data.followUpQuery, 
           data.toolCallId, 
-          data.toolCall,      // Pass the full toolCall object
-          [inputMessageForApi], // Pass the constructed original input
-          0 // Start with no retries
+          data.toolCall,      
+          [inputMessageForApi], 
+          0 
         );
       } else {
         console.log("[handleAnalyzeChart] Received direct text response.");
-        addSystemMessage(data.response, 'auto');
+        addSystemMessage(data.response, 'auto', data.responseId);
       }
 
     } catch (error) {
@@ -205,20 +195,20 @@ export const ChatContainer = ({ chartRef }: ChatContainerProps) => {
     console.log("[handleSendMessage] Received:", content);
 
     addUserMessage(content);
+    const idToSend = state.lastResponseId; 
     setState((prev) => ({ ...prev, isProcessing: true }));
 
-    // Construct the input message as sent to the API
     const inputMessageForApi = {
       role: 'user',
       content: [{ type: 'input_text', text: content } as const]
     };
 
     try {
-      console.log("[handleSendMessage] Calling /api/chat...");
+      console.log(`[handleSendMessage] Calling /api/chat... (previous_id: ${idToSend})`);
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content }) // Send simple string here
+        body: JSON.stringify({ content, previous_response_id: idToSend })
       });
       const data = await response.json();
 
@@ -228,17 +218,17 @@ export const ChatContainer = ({ chartRef }: ChatContainerProps) => {
 
       if (data.actionRequired === 'get_chart_context') {
         console.log("[handleSendMessage] Received request for chart context for query:", data.followUpQuery);
-        // Call executeChartAnalysis with the required data
+        setState(prev => ({ ...prev, lastResponseId: data.responseId }));
         await executeChartAnalysis(
           data.followUpQuery, 
           data.toolCallId, 
-          data.toolCall,      // Pass the full toolCall object
-          [inputMessageForApi], // Pass the constructed original input
-          0 // Start with no retries
+          data.toolCall,      
+          [inputMessageForApi], 
+          0 
         );
       } else {
         console.log("[handleSendMessage] Received direct text response.");
-        addSystemMessage(data.response, 'auto');
+        addSystemMessage(data.response, 'auto', data.responseId);
       }
 
     } catch (error) {
@@ -249,7 +239,7 @@ export const ChatContainer = ({ chartRef }: ChatContainerProps) => {
     } finally {
       setState((prev) => ({ ...prev, isProcessing: false }));
     }
-  }, [state.isProcessing, chartRef, toast, executeChartAnalysis]);
+  }, [state.isProcessing, state.lastResponseId, chartRef, toast, executeChartAnalysis]);
 
   return (
     <div className="flex flex-1 min-h-0 flex-col bg-background dark:bg-neutral-900 overflow-hidden rounded-xl">

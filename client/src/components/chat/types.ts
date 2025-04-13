@@ -34,4 +34,5 @@ export interface ChatState {
   selectedAgent: AgentType;
   inputValue: string;
   isProcessing: boolean;
+  lastResponseId: string | null;
 } 
