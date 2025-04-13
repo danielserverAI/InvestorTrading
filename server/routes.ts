@@ -591,56 +591,83 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   }
 
-  // --- UPDATED Chat Endpoint (Intent Detection) ---
+  // --- UPDATED Chat Endpoint (using /v1/responses) ---
   app.post("/api/chat", async (req: Request, res: Response) => {
     try {
-      const { content } = req.body as { content: string; };
+      const { content, previous_response_id } = req.body as { 
+          content: string; 
+          previous_response_id?: string | null; // Expect previous ID for conversation state
+      };
 
       if (!content) {
         return res.status(400).json({ success: false, error: "Missing content in request body" });
       }
 
-      const tools: ChatCompletionTool[] = [
+      // Define the chart analysis function tool (structure for /v1/responses)
+      const tools = [
         {
-          type: "function",
-          function: {
-            name: "request_chart_analysis",
-            description: "Call this function if the user asks a question that requires analyzing the currently displayed financial chart data (e.g., asking about trends, patterns, technical indicators, support/resistance, price action on the chart). Do not call if the user is asking for general information or definitions.",
-            parameters: { type: "object", properties: {}, },
+          type: "function" as const,
+          name: "get_current_chart_analysis",
+          description: "Call this function ONLY if the user asks a question that specifically requires analyzing the currently displayed financial chart data (e.g., asking about trends, patterns, technical indicators, support/resistance, price action on the chart). Do not call for general financial questions or definitions.",
+          parameters: { 
+              type: "object" as const, 
+              properties: {}, 
+              required: [], 
+              additionalProperties: false 
           },
+          strict: true,
         },
       ];
 
-      const response = await openai.chat.completions.create({
-        model: "gpt-3.5-turbo",
-        messages: [
-          { role: "system", content: "You are a helpful assistant. You have access to a financial chart. Use the 'request_chart_analysis' function if the user's query requires analyzing the chart data." },
-          { role: "user", content: content },
-        ],
-        tools: tools,
+      console.log(`Calling /v1/responses with content: "${content}"${previous_response_id ? ` and previous_id: ${previous_response_id}` : ''}`);
+
+      // Call the /v1/responses endpoint
+      const response = await openai.responses.create({
+        model: "gpt-4o",
+        input: content,
+        previous_response_id: previous_response_id || null,
+        tools: tools, // Pass the correctly structured tools array
         tool_choice: "auto",
+        store: true,
       });
 
-      const responseMessage = response.choices[0].message;
+      // Process the response output
+      const output = response.output?.[0]; // Check the first output item
 
-      if (responseMessage.tool_calls && responseMessage.tool_calls[0]?.function?.name === 'request_chart_analysis') {
-        console.log("OpenAI requested chart analysis function call.");
+      if (output?.type === 'function_call' && output.name === 'get_current_chart_analysis') {
+        // Function call requested
+        console.log("Responses API requested chart analysis function call.");
+        // *** Log the arguments the model generated ***
+        console.log("Function Call Arguments Received:", output.arguments);
+        // *** End Logging ***
         return res.json({
           success: true,
           actionRequired: 'get_chart_context',
-          followUpQuery: content,
+          responseId: response.id, // Pass back the current response ID for the next turn
+          followUpQuery: content, // Send original query back for context
+          toolCallId: output.call_id, // Pass the tool_call_id needed for submitting results
+          toolCall: output // *** ADD THE FULL toolCall OBJECT ***
         });
-      } else {
-        console.log("OpenAI did not request function call, returning text response.");
-        const textResponse = responseMessage.content;
+      } else if (output?.type === 'message' && output.role === 'assistant') {
+        // Text response generated
+        // Use the convenience property or extract from content array
+        const textResponse = response.output_text || 
+                             output.content?.find(part => part.type === 'output_text')?.text || 
+                             "Sorry, I couldn't generate a text response.";
+        console.log("Responses API returned direct text response.");
         return res.json({
           success: true,
-          response: textResponse || "Sorry, I couldn't process that request.",
+          response: textResponse,
+          responseId: response.id, // Pass back the current response ID
         });
+      } else {
+        // Unexpected output structure
+        console.error("Unexpected output structure from /v1/responses:", response.output);
+        throw new Error("Unexpected response format from AI.");
       }
 
     } catch (error) {
-      console.error("Chat processing error:", error);
+      console.error("Chat processing error (/v1/responses):", error);
       res.status(500).json({
         success: false,
         error: error instanceof Error ? error.message : "Unknown error processing chat message"
@@ -648,80 +675,156 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // --- UPDATED Execute Analysis Endpoint ---
-  app.post("/api/execute-chart-analysis", async (req: Request, res: Response) => {
+  // --- NEW Endpoint to submit tool results (chart context) --- 
+  app.post("/api/submit-chart-context", async (req: Request, res: Response) => {
     try {
-      const { chartContext, originalQuery, visibleRange } = req.body as {
-        chartContext: { 
-            symbol: string;
-            interval: string;
-            chartData: ChartDataPoint[]; // Use defined type
-            markers: SeriesMarkerInfo[]; // Use defined type
-            selectedPoints: number[];
-        };
-        originalQuery: string;
-        visibleRange: TimeScaleVisibleRange | null; // Expect visible range
-      };
+      // Extract necessary data from the request body sent by the client
+      const { 
+        responseId,         // ID of the response that requested the tool call (needed? No, context is in input)
+        toolCallId,         // ID of the specific tool call instance
+        chartContext,       // Context needed to generate the tool result payload
+        originalQuery,      // Original user query for context
+        originalInput,      // *** The original input array sent in the first API call ***
+        toolCall            // *** The original function_call object from the first API response ***
+      } = req.body;
 
-      if (!chartContext || !originalQuery || !visibleRange) {
-         return res.status(400).json({ success: false, error: "Missing chartContext, originalQuery, or visibleRange" });
+      // --- Generate Tool Result Payload ---
+      // Ensure chartContext is valid before proceeding
+      if (!chartContext || typeof chartContext !== 'object') {
+          throw new Error("Invalid or missing 'chartContext' in request body.");
       }
-
-      console.log(`Executing analysis for query: "${originalQuery}"...`);
-
-      // --- Filter Data based on Visible Range --- 
-      const filteredData = chartContext.chartData.filter(point => 
-          point.time >= visibleRange.from && point.time <= visibleRange.to
-      );
-      console.log(`Filtered data points: ${filteredData.length} (from original ${chartContext.chartData.length})`);
-
-      // --- Define Marker Legend --- 
-      const markerLegend = `Marker Legend: 
-- shape:'arrowUp', color:'#26a69a' = User-placed Buy Signal
-- shape:'arrowDown', color:'#ef5350' = User-placed Sell Signal
-- shape:'circle', color:'#FFA726' = User Highlight
-- shape:'square', color:'#a855f7' = User Event Marker`;
-
-      // --- Construct Prompts --- 
-      const systemPrompt = `You are a helpful financial analyst assistant. Analyze the provided chart data and user query, providing concise and relevant insights based on the information given. Pay close attention to any user-placed markers or selected points, as they indicate areas of interest for the user. 
-${markerLegend}`;
       
-      const userPrompt = `Analyze the following chart data for ${chartContext.symbol} (${chartContext.interval}) within the user's visible time range:
+      // *** RESTORED LOGIC TO PROCESS CHART CONTEXT ***
+      // You might need to get visibleRange from req.body again if filtering is needed here
+      // For now, assuming chartContext contains the relevant data points needed
+      // const visibleRange = req.body.visibleRange; 
+      // const filteredData = visibleRange 
+      //   ? chartContext.chartData.filter(point => 
+      //       point.time >= visibleRange.from && point.time <= visibleRange.to)
+      //   : chartContext.chartData; // Or handle missing range appropriately
+      
+      const payloadObject = {
+          status: "success",
+          symbol: chartContext.symbol,
+          interval: chartContext.interval,
+          // visibleDataPoints: filteredData, // Use processed data if filtering
+          chartData: chartContext.chartData, // Sending all data for now
+          markers: chartContext.markers,
+          selectedPoints: Array.from(chartContext.selectedPoints || []), // Ensure selectedPoints is an array
+          userQuery: originalQuery // Reiterate the query for context
+      };
+      // *** END RESTORED LOGIC ***
 
-Visible Data Points: ${JSON.stringify(filteredData)} 
-User-placed Markers (within full dataset): ${JSON.stringify(chartContext.markers)}
-User-selected Points (timestamps): ${JSON.stringify(chartContext.selectedPoints || [])} 
-
-User Query: ${originalQuery}`;
-
-      // Limit prompt length if needed (simple example)
-      const maxPromptLength = 15000; // Adjust based on model limits (e.g., gpt-3.5-turbo-16k has 16k tokens)
-      const finalUserPrompt = userPrompt.length > maxPromptLength ? userPrompt.substring(0, maxPromptLength) + "... [prompt truncated]" : userPrompt;
-      if (userPrompt.length > maxPromptLength) {
-          console.warn("Prompt truncated due to length limit.");
+      const toolResultPayload = JSON.stringify(payloadObject); // Stringify the constructed object
+      const maxPayloadLength = 15000; 
+      const finalToolResultPayload = toolResultPayload.length > maxPayloadLength ? 
+          JSON.stringify({ status: "success", data_truncated: true, userQuery: originalQuery }) : 
+          toolResultPayload;
+      // Add warning logic back if needed
+      if (toolResultPayload.length > maxPayloadLength) {
+           console.warn("Tool result payload truncated due to length limit.");
       }
 
-      // ... OpenAI call ...
-      const chatCompletion = await openai.chat.completions.create({
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: finalUserPrompt }, // Use potentially truncated prompt
-        ],
-        model: "gpt-3.5-turbo", // Consider gpt-3.5-turbo-16k or gpt-4 if needed
+      // --- Define Tools (ensure this matches expected tools) ---
+      const tools = [{
+          type: "function" as const,
+          name: "analyzeChartContext",
+          description: "Analyze the provided chart context...",
+          parameters: { 
+              type: "object" as const, 
+              properties: {}, 
+              required: [], 
+              additionalProperties: false
+          },
+          strict: true
+      }];
+
+      // Validate received data (basic example)
+      if (!originalInput || !Array.isArray(originalInput) || originalInput.length === 0) {
+        throw new Error("Missing or invalid 'originalInput' in request body.");
+      }
+      if (!toolCall || typeof toolCall !== 'object' || toolCall.type !== 'function_call') {
+        throw new Error("Missing or invalid 'toolCall' object in request body.");
+      }
+      if (toolCall.call_id !== toolCallId) {
+         console.warn("Mismatch between toolCall.call_id and toolCallId from request body.");
+         // Decide how to handle: trust toolCall.call_id? For now, use toolCallId from body.
+      }
+
+      // Prepare the input array for the follow-up call using data from the request body
+      const new_input = [
+        ...originalInput, // Use the input array passed from the client
+        toolCall,         // Use the function_call object passed from the client
+        {
+          type: "function_call_output", 
+          call_id: toolCallId, // Use the specific toolCallId from the request body
+          output: finalToolResultPayload 
+        },
+        {
+          // *** ADD SYSTEM MESSAGE *AFTER* FUNCTION OUTPUT ***
+          role: "system",
+          // Reference the original query directly in the instruction
+          content: [{ type: "input_text", text: `You have received the chart data in the function output. Use this data to directly answer the user's query: "${originalQuery}"` } as const]
+        }
+      ];
+
+      // *** Add Logging Here ***
+      console.log("--- Submitting Tool Result to OpenAI ---");
+      console.log("Tool Result Payload Length:", toolResultPayload.length);
+      console.log("Final Payload (truncated?", toolResultPayload.length > maxPayloadLength, "):", finalToolResultPayload);
+      console.log("Sending Input Array:", JSON.stringify(new_input, null, 2));
+      console.log("Sending Tools:", JSON.stringify(tools, null, 2));
+      // *** End Logging ***
+
+      // --- Call /v1/responses again with tool result ---
+      const response = await openai.responses.create({
+        model: "gpt-4o",
+        input: new_input, 
+        tools: tools, 
+        store: true, 
       });
-      // ... rest of the handler ...
-      const analysis = chatCompletion.choices[0]?.message?.content;
-      if (!analysis) {
-        throw new Error("OpenAI did not return a valid analysis for execution.");
+
+      // *** Log the entire response object received after submitting tool result ***
+      console.log("--- Received Response from OpenAI After Tool Submission ---");
+      console.log(JSON.stringify(response, null, 2));
+      // *** End Logging ***
+
+      // Process the final response
+      const output = response.output?.[0];
+
+      if (output?.type === 'message' && output.role === 'assistant') {
+        // CASE 1: Model generated a text response - SUCCESS
+        const textResponse = response.output_text || 
+                             output.content?.find(part => part.type === 'output_text')?.text || 
+                             "Analysis generated."; // Fallback
+        console.log("Received final analysis after tool call.");
+        res.json({ success: true, response: textResponse, responseId: response.id });
+      
+      } else if (output?.type === 'function_call' && output.name === 'analyzeChartContext') {
+        // CASE 2: Model requested ANOTHER function call - Send back to client
+        console.log("OpenAI requested chart analysis AGAIN after receiving context.");
+        // Note: We might be entering a loop if the model keeps calling the function.
+        // Consider refining the tool or prompts if this happens frequently.
+        res.json({
+          success: true,
+          actionRequired: 'get_chart_context', // Signal client to run the flow again
+          responseId: response.id,            // Pass the NEW response ID
+          followUpQuery: originalQuery,       // Keep the original query for context
+          toolCallId: output.call_id,         // Pass the NEW tool call ID
+          toolCall: output                    // Pass the NEW tool call object
+        });
+
+      } else {
+        // CASE 3: Unexpected output structure
+        console.error("Unexpected output structure after submitting tool result:", response.output);
+        throw new Error("Unexpected response format after tool submission.");
       }
-      console.log("Received final analysis from OpenAI.");
-      res.json({ success: true, response: analysis });
 
     } catch (error) {
-      console.error("Chart analysis execution error:", error);
+      console.error("Error submitting chart context:", error);
       res.status(500).json({
         success: false,
-        error: error instanceof Error ? error.message : "Unknown error executing chart analysis"
+        error: error instanceof Error ? error.message : "Unknown error submitting tool result"
       });
     }
   });
