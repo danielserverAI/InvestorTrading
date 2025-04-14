@@ -23,7 +23,7 @@
     --destructive-foreground: 210 40% 98%;
     --border: 214.3 31.8% 91.4%;
     --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%; /* Darker ring */
+    --ring: 215.4 16.3% 46.9%; /* GREY RING for light theme (using muted-foreground) */
     --radius: 0.75rem;
     --chart-1: 220 70% 50%;
     --chart-2: 160 60% 45%;
@@ -61,7 +61,7 @@
     --destructive-foreground: 210 40% 98%;
     --border: 217.2 32.6% 17.5%;
     --input: 217.2 32.6% 17.5%;
-    --ring: 217.2 32.6% 17.5%;
+    --ring: 215 20.2% 65.1%; /* GREY RING for dark theme (using muted-foreground) */
     --radius: 0.75rem;
     --chart-1: 210 70% 80%;
     --chart-2: 160 60% 75%;

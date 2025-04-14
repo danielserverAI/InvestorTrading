@@ -78,8 +78,9 @@ const fetchIntervalData = (symbol: string, rangeSelection: string): CandlestickD
       startDate.setMonth(startDate.getMonth() - 1); // Start data generation from 1 month ago
       break;
     case '1Y':
-      numDataPoints = 52; // ~52 weekly candles for 1 year
-      intervalMinutes = 7 * 24 * 60;
+      // *** Generate DAILY data for 1 Year ***
+      numDataPoints = 365; // Generate roughly 365 daily candles
+      intervalMinutes = 24 * 60; // Daily interval
       startDate.setFullYear(startDate.getFullYear() - 1); // Start data generation from 1 year ago
       break;
     default: // Default might fetch e.g. 100 daily points 
@@ -170,6 +171,18 @@ export const TradingViewChart = forwardRef<ChartHandle, TradingViewChartProps>((
   const [chartData, setChartData] = useState<(CandlestickData<Time> | BarData<Time>)[]>([]);
   const [markers, setMarkers] = useState<SeriesMarker<Time>[]>([]);
 
+  // Function to get the currently active series API instance
+  const getActiveSeries = useCallback((): ISeriesApi<SeriesType, Time> | null => {
+    switch (chartType) {
+        case 'candles': return candleSeriesRef.current;
+        case 'bars': return barSeriesRef.current;
+        case 'line': return lineSeriesRef.current;
+        case 'area': return areaSeriesRef.current;
+        case 'baseline': return baselineSeriesRef.current;
+        default: return null;
+    }
+  }, [chartType]);
+
   // Expose getChartContext via ref
   useImperativeHandle(ref, () => ({
     getChartContext: () => ({
@@ -201,48 +214,93 @@ export const TradingViewChart = forwardRef<ChartHandle, TradingViewChartProps>((
       shape: string;
       text?: string;
     }) => {
-      if (!chartRef.current || !candleSeriesRef.current) {
-        console.error("Cannot place marker: Chart or main series not initialized.");
+      console.log("[TradingViewChart] placeMarker called with:", markerData);
+
+      if (!chartRef.current) { // Only need chartRef check here initially
+        console.error("Cannot place marker: Chart not initialized.");
         return;
       }
 
-      console.log("Placing marker:", markerData);
+      // --- Find the index of the data point closest in time ---
+      if (chartData.length === 0) {
+        console.warn("Cannot place marker: Chart data is empty.");
+        return;
+      }
 
-      // Find the index - Ensure comparison uses numbers
-      const dataPointIndex = chartData.findIndex(d => 
-          (typeof d.time === 'number' ? d.time : parseFloat(d.time as string)) >= markerData.timestamp
-      );
+      let closestIndex = 0;
+      let minDiff = Infinity;
+
+      chartData.forEach((d, index) => {
+          // Ensure time is a number for comparison
+          const pointTime = typeof d.time === 'number' ? d.time : parseFloat(d.time as string);
+          if (isNaN(pointTime)) return; // Skip invalid data points
+          
+          const diff = Math.abs(pointTime - markerData.timestamp);
+          if (diff < minDiff) {
+              minDiff = diff;
+              closestIndex = index;
+          }
+      });
+
+      const dataPointIndex = closestIndex; // Use the index of the closest point
+      // --- End of finding index ---
       
-      if (dataPointIndex === -1) {
-         console.warn(`Cannot place marker: No data point found at or after timestamp ${markerData.timestamp}`);
+      if (dataPointIndex < 0 || dataPointIndex >= chartData.length) { 
+         console.warn(`Cannot place marker: Could not find a valid data point near timestamp ${markerData.timestamp}`);
          return; 
       }
       const targetTime = chartData[dataPointIndex]?.time;
-      if (!targetTime) return;
+      if (!targetTime) return; // Should not happen if index is valid, but safety check
+
+      console.log(`Placing marker near timestamp ${markerData.timestamp} at data point ${dataPointIndex} with time ${targetTime}`);
 
       // Validate/cast position and shape using types from lightweight-charts
       const validPosition = markerData.position as SeriesMarkerPosition;
       const validShape = markerData.shape as SeriesMarkerShape;
 
       const newMarker: SeriesMarker<Time> = {
-          time: targetTime, // Use the actual data point time (Time type)
-          position: validPosition, // Use validated/cast type
+          time: targetTime, // *** USE targetTime FROM CLOSEST POINT ***
+          position: validPosition,
           color: markerData.color,
-          shape: validShape, // Use validated/cast type
+          shape: validShape,
           text: markerData.text,
       };
 
       // Add marker to local state
-      setMarkers(prevMarkers => [...prevMarkers, newMarker]);
+      let updatedMarkers: SeriesMarker<Time>[] = [];
+      setMarkers(prevMarkers => { 
+          // Filter out potential duplicate markers at the exact same time/position/shape/color 
+          // to prevent accidental duplicates if called rapidly
+          const existingMarkerIndex = prevMarkers.findIndex(m => 
+              m.time === newMarker.time && 
+              m.position === newMarker.position &&
+              m.shape === newMarker.shape &&
+              m.color === newMarker.color
+          );
+          const baseMarkers = existingMarkerIndex !== -1 
+              ? prevMarkers.filter((_, idx) => idx !== existingMarkerIndex)
+              : prevMarkers;
+              
+          updatedMarkers = [...baseMarkers, newMarker].sort((a, b) => (a.time as number) - (b.time as number)); // Keep sorted
+          return updatedMarkers;
+      });
 
-      // Update the series data in the chart library
-      // Important: This assumes setMarkers triggers a re-render that updates the series
-      // If not, you might need to call candleSeriesRef.current.setMarkers directly,
-      // but managing state via React is generally preferred.
-      // Example (if direct manipulation is needed):
-      // candleSeriesRef.current.setMarkers([...markersRef.current, newMarker]); 
+      // Attempt to update the chart instance directly after state update
+      const activeSeries = getActiveSeries();
+      if (activeSeries) {
+          console.log("[placeMarker] Directly setting markers on active series:", updatedMarkers); 
+          try {
+              // Use the updatedMarkers array captured from the state setter
+              activeSeries.setMarkers(updatedMarkers);
+          } catch (error) { 
+              console.error("[placeMarker] Error directly setting markers:", error);
+          }
+      } else {
+          // This check also covers the case where the specific series type ref (e.g., candleSeriesRef) might be null
+          console.warn("[placeMarker] Could not directly set markers: No active series found or series ref is null.");
+      }
     }
-  }), [symbol, interval, chartData, markers, selectedPoints]); // Dependencies for the exposed data
+  }), [symbol, interval, chartData, markers, selectedPoints, getActiveSeries]); // Ensure getActiveSeries is here
 
   // Reset selections and markers when symbol or interval changes
   useEffect(() => {
@@ -277,18 +335,6 @@ export const TradingViewChart = forwardRef<ChartHandle, TradingViewChartProps>((
       value: 'close' in dataPoint ? dataPoint.close : (dataPoint as SingleValueData<Time>).value, // Use close if available
     }));
   };
-
-  // Function to get the currently active series API instance
-  const getActiveSeries = useCallback((): ISeriesApi<SeriesType, Time> | null => {
-    switch (chartType) {
-        case 'candles': return candleSeriesRef.current;
-        case 'bars': return barSeriesRef.current;
-        case 'line': return lineSeriesRef.current;
-        case 'area': return areaSeriesRef.current;
-        case 'baseline': return baselineSeriesRef.current;
-        default: return null;
-    }
-  }, [chartType]);
 
   // THIS EFFECT HANDLES CHART CREATION & INITIAL SERIES & VISIBLE RANGE
   useEffect(() => {
@@ -327,7 +373,7 @@ export const TradingViewChart = forwardRef<ChartHandle, TradingViewChartProps>((
                   case TickMarkType.DayOfMonth:
                       return date.getDate().toString();
                   case TickMarkType.Time:
-                      return date.toLocaleTimeString();
+                      return date.toLocaleTimeString(undefined, { hour12: false, hour: '2-digit', minute: '2-digit' });
                   default:
                       return '';
               }
@@ -509,11 +555,57 @@ export const TradingViewChart = forwardRef<ChartHandle, TradingViewChartProps>((
     }
     
     // Update markers on the active series (should run even if type didn't change)
-    const activeSeries = getActiveSeries();
-    if (activeSeries) {
-      // Sort markers by time before setting them
-      const sortedMarkers = [...markers].sort((a, b) => (a.time as number) - (b.time as number));
-      activeSeries.setMarkers(sortedMarkers);
+    // Sort markers by time before setting them
+    const sortedMarkers = [...markers].sort((a, b) => (a.time as number) - (b.time as number));
+    console.log(`[useEffect/Markers] Updating markers. Found ${sortedMarkers.length} markers. Chart type: ${chartType}`);
+
+    try {
+        switch (chartType) {
+            case 'candles':
+                if (candleSeriesRef.current) {
+                    console.log("[useEffect/Markers] Setting markers on candleSeriesRef");
+                    candleSeriesRef.current.setMarkers(sortedMarkers);
+                } else {
+                    console.warn("[useEffect/Markers] candleSeriesRef is null");
+                }
+                break;
+            case 'bars':
+                 if (barSeriesRef.current) {
+                    console.log("[useEffect/Markers] Setting markers on barSeriesRef");
+                    barSeriesRef.current.setMarkers(sortedMarkers);
+                } else {
+                    console.warn("[useEffect/Markers] barSeriesRef is null");
+                }
+                break;
+            case 'line':
+                 if (lineSeriesRef.current) {
+                    console.log("[useEffect/Markers] Setting markers on lineSeriesRef");
+                    lineSeriesRef.current.setMarkers(sortedMarkers);
+                } else {
+                    console.warn("[useEffect/Markers] lineSeriesRef is null");
+                }
+                break;
+            case 'area':
+                if (areaSeriesRef.current) {
+                    console.log("[useEffect/Markers] Setting markers on areaSeriesRef");
+                    areaSeriesRef.current.setMarkers(sortedMarkers);
+                } else {
+                    console.warn("[useEffect/Markers] areaSeriesRef is null");
+                }
+                break;
+            case 'baseline':
+                if (baselineSeriesRef.current) {
+                    console.log("[useEffect/Markers] Setting markers on baselineSeriesRef");
+                    baselineSeriesRef.current.setMarkers(sortedMarkers);
+                } else {
+                    console.warn("[useEffect/Markers] baselineSeriesRef is null");
+                }
+                break;
+            default:
+                console.warn(`[useEffect/Markers] Unknown chartType: ${chartType}`);
+        }
+    } catch (error) {
+        console.error("[useEffect/Markers] Error setting markers:", error);
     }
 
   }, [chartType, chartData, isDarkMode, markers]); // Keep isDarkMode here for theme updates

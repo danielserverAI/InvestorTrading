@@ -594,10 +594,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // --- UPDATED Chat Endpoint (using /v1/responses) ---
   app.post("/api/chat", async (req: Request, res: Response) => {
     try {
-      const { content, previous_response_id } = req.body as { 
+      // *** Extract model from request body ***
+      const { content, previous_response_id, model } = req.body as { 
           content: string; 
-          previous_response_id?: string | null; // Expect previous ID for conversation state
+          previous_response_id?: string | null; 
+          model?: string; // Added model field
       };
+      
+      // Use provided model or default
+      const requestedModel = model || 'gpt-4o-mini'; 
 
       if (!content) {
         return res.status(400).json({ success: false, error: "Missing content in request body" });
@@ -686,12 +691,11 @@ Key Capabilities and Instructions:
         }
       ];
 
-      console.log(`Calling /v1/responses with content: "${content}"${previous_response_id ? ` and previous_id: ${previous_response_id}` : ''}`);
+      console.log(`Calling /v1/responses with model: ${requestedModel}, content: "${content}"${previous_response_id ? `, previous_id: ${previous_response_id}` : ''}`);
 
       // Call the /v1/responses endpoint
       const response = await openai.responses.create({
-        model: "gpt-4o",
-        // Send the structured input array (system + user message)
+        model: requestedModel, // *** Use requested model ***
         input: apiInput, 
         previous_response_id: previous_response_id || null,
         tools: tools, 
@@ -769,29 +773,32 @@ Key Capabilities and Instructions:
   // --- NEW Endpoint to submit tool results (chart context) --- 
   app.post("/api/submit-chart-context", async (req: Request, res: Response) => {
     try {
-      // Extract necessary data from the request body sent by the client
+      // *** Extract model from request body ***
       const { 
-        responseId,         // ID of the response that requested the tool call (needed? No, context is in input)
-        toolCallId,         // ID of the specific tool call instance
-        chartContext,       // Context needed to generate the tool result payload
-        originalQuery,      // Original user query for context
-        originalInput,      // *** The original input array sent in the first API call ***
-        toolCall            // *** The original function_call object from the first API response ***
+        toolCallId,       
+        chartContext,     
+        originalQuery,    
+        originalInput,    
+        toolCall,         
+        model, // Added model field
+        toolResultPayload: clientProvidedPayload // Optional payload from client (for marker confirm)
       } = req.body;
+      
+      // Use provided model or default
+      const requestedModel = model || 'gpt-4o-mini';
 
       // --- Generate Tool Result Payload ---
       let finalToolResultPayload: string;
       
-      // Check if this is a marker placement confirmation or chart context submission
       if (toolCall?.name === 'place_chart_marker') {
-          // For marker placement, use the success payload sent from the client
-          if (!req.body.toolResultPayload || typeof req.body.toolResultPayload !== 'string') {
+          // Use payload sent by client for marker confirmation
+          if (!clientProvidedPayload || typeof clientProvidedPayload !== 'string') {
              throw new Error("Missing or invalid 'toolResultPayload' for marker confirmation.");
           }
-          finalToolResultPayload = req.body.toolResultPayload;
+          finalToolResultPayload = clientProvidedPayload;
           console.log("Processing marker placement confirmation.");
       } else if (toolCall?.name === 'get_current_chart_analysis') {
-           // For chart context, generate payload as before
+           // Generate payload from chart context
           console.log("Processing chart context submission.");
           if (!chartContext || typeof chartContext !== 'object') {
               throw new Error("Invalid or missing 'chartContext' in request body for get_current_chart_analysis.");
@@ -807,14 +814,9 @@ Key Capabilities and Instructions:
           };
           const toolResultPayload = JSON.stringify(payloadObject); 
           const maxPayloadLength = 15000; 
-          finalToolResultPayload = toolResultPayload.length > maxPayloadLength ? 
-              JSON.stringify({ status: "success", data_truncated: true, userQuery: originalQuery }) : 
-              toolResultPayload;
-          if (toolResultPayload.length > maxPayloadLength) {
-               console.warn("Tool result payload truncated due to length limit.");
-          }
+          finalToolResultPayload = toolResultPayload.length > maxPayloadLength ? JSON.stringify({ status: "success", data_truncated: true, userQuery: originalQuery }) : toolResultPayload;
+          if (toolResultPayload.length > maxPayloadLength) { console.warn("Payload truncated."); }
       } else {
-           // Handle unexpected tool call name if necessary
            throw new Error(`Unexpected tool call name received: ${toolCall?.name}`);
       }
 
@@ -895,11 +897,16 @@ Key Capabilities and Instructions:
 
       // --- Call /v1/responses again with tool result ---
       const response = await openai.responses.create({
-        model: "gpt-4o",
+        model: requestedModel, // *** Use requested model ***
         input: new_input, 
         tools: tools, 
         store: true, 
       });
+
+      // *** Log the entire response object received after submitting tool result ***
+      console.log("--- Received Response from OpenAI After Tool Submission ---");
+      console.log(JSON.stringify(response, null, 2));
+      // *** End Logging ***
 
       // Process the final response
       const output = response.output?.[0];
@@ -957,7 +964,7 @@ Key Capabilities and Instructions:
     } catch (error) {
       console.error("Error submitting chart context:", error);
       res.status(500).json({
-        success: false,
+        success: false, 
         error: error instanceof Error ? error.message : "Unknown error submitting tool result"
       });
     }

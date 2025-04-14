@@ -35,4 +35,5 @@ export interface ChatState {
   inputValue: string;
   isProcessing: boolean;
   lastResponseId: string | null;
+  selectedModel: string;
 } 

@@ -14,6 +14,7 @@ const initialState: ChatState = {
   inputValue: '',
   isProcessing: false,
   lastResponseId: null,
+  selectedModel: 'gpt-4o-mini', // Default model
 };
 
 interface ChatContainerProps {
@@ -61,12 +62,18 @@ export const ChatContainer = ({ chartRef }: ChatContainerProps) => {
     }));
   };
 
+  // *** Handler for model change ***
+  const handleModelChange = (model: string) => {
+      setState(prev => ({ ...prev, selectedModel: model }));
+  };
+
   // Function to execute the second step: submit chart context and tool results
   const executeChartAnalysis = useCallback(async (
     originalQuery: string, 
     toolCallId: string, 
     toolCall: any,
     originalInput: any[],
+    model: string,
     retryCount = 0
   ) => {
     const MAX_RETRIES = 2;
@@ -101,7 +108,8 @@ export const ChatContainer = ({ chartRef }: ChatContainerProps) => {
             originalQuery, 
             toolCallId,     
             toolCall,       
-            originalInput   
+            originalInput, 
+            model
         })
       });
 
@@ -118,12 +126,63 @@ export const ChatContainer = ({ chartRef }: ChatContainerProps) => {
           analysisData.toolCallId,    
           analysisData.toolCall,      
           originalInput,             
+          model,
           retryCount + 1              
         );
       } else if (analysisData.response) {
         console.log("[executeChartAnalysis] Received final text response.");
         addSystemMessage(analysisData.response, 'auto', analysisData.responseId); 
+      } else if (analysisData.actionRequired === 'place_marker') {
+        // *** HANDLE 'place_marker' received AFTER submitting context ***
+        console.log("[executeChartAnalysis] Received request to place marker after context submit:", analysisData.markerArgs);
+        const markerArgs = analysisData.markerArgs;
+        const markerToolCallId = analysisData.toolCallId;
+        const markerToolCall = analysisData.toolCall;
+        const markerResponseId = analysisData.responseId; 
+        // originalInput should be the same array passed into this executeChartAnalysis call
+
+        if (chartRef.current?.placeMarker) { 
+          chartRef.current.placeMarker(markerArgs);
+          setState(prev => ({ ...prev, lastResponseId: markerResponseId })); 
+          try {
+            console.log(`[executeChartAnalysis] Confirming marker placement for call_id: ${markerToolCallId}`);
+            const confirmResponse = await fetch('/api/submit-chart-context', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ 
+                  chartContext: null, 
+                  originalQuery: originalQuery, // Use the query passed to this function
+                  toolCallId: markerToolCallId,
+                  toolCall: markerToolCall,
+                  originalInput: originalInput, // Use the input passed to this function
+                  toolResultPayload: JSON.stringify({ status: 'success', message: 'Marker placed successfully.' }),
+                  model: model // Use the model passed to this function
+              })
+            });
+            console.log(`[executeChartAnalysis] Marker confirmation response status: ${confirmResponse.status}`);
+            const confirmData = await confirmResponse.json();
+            console.log("[executeChartAnalysis] Marker confirmation response data:", confirmData);
+            if (!confirmResponse.ok || !confirmData.success) {
+              throw new Error(confirmData.error || `Marker confirmation failed: ${confirmResponse.status}`);
+            }
+            if (confirmData.response) {
+                addSystemMessage(confirmData.response, 'auto', confirmData.responseId);
+            } else if (confirmData.actionRequired) {
+                 console.warn("Confirmation triggered another action:", confirmData);
+            } else {
+                 console.warn("No text response after marker confirmation:", confirmData);
+            }
+          } catch (confirmError) {
+              console.error("Error confirming marker placement within executeChartAnalysis:", confirmError);
+              const errorMsg = confirmError instanceof Error ? confirmError.message : 'Failed to confirm marker placement';
+              addSystemMessage(`Error after placing marker: ${errorMsg}`, 'system');
+          }
+        } else {
+            console.error("chartRef.current.placeMarker method not found!");
+            addSystemMessage("Error: Could not place marker on the chart.", 'system');
+        }
       } else {
+         // Now this is truly unexpected
          throw new Error("Received unexpected data structure after submitting chart context.");
       }
 
@@ -145,8 +204,9 @@ export const ChatContainer = ({ chartRef }: ChatContainerProps) => {
     if (state.isProcessing) return;
     console.log("[handleAnalyzeChart] Button clicked.");
     const predefinedQuery = "Analyze the current chart.";
+    const currentModel = state.selectedModel;
     setState((prev) => ({ ...prev, isProcessing: true, lastResponseId: null }));
-    addSystemMessage(`Requesting analysis: "${predefinedQuery}"`, 'system');
+    addSystemMessage(`Requesting analysis: "${predefinedQuery}" using ${currentModel}`, 'system');
     const inputMessageForApi = {
       role: 'user',
       content: [{ type: 'input_text', text: predefinedQuery } as const]
@@ -156,7 +216,11 @@ export const ChatContainer = ({ chartRef }: ChatContainerProps) => {
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content: predefinedQuery, previous_response_id: null }) 
+        body: JSON.stringify({
+            content: predefinedQuery, 
+            previous_response_id: null, 
+            model: currentModel 
+        })
       });
       const data = await response.json();
 
@@ -172,6 +236,7 @@ export const ChatContainer = ({ chartRef }: ChatContainerProps) => {
           data.toolCallId, 
           data.toolCall,      
           [inputMessageForApi], 
+          currentModel,
           0 
         );
       } else if (data.actionRequired === 'place_marker') {
@@ -189,40 +254,52 @@ export const ChatContainer = ({ chartRef }: ChatContainerProps) => {
           chartRef.current.placeMarker(markerArgs);
           setState(prev => ({ ...prev, lastResponseId: markerResponseId })); // Update ID for context
 
-          // *** Immediately submit confirmation to backend ***
+          // *** Await the confirmation call to complete the tool loop ***
           try {
-            console.log("[handleAnalyzeChart] Confirming marker placement to backend...");
+            console.log(`[handleAnalyzeChart] Attempting to confirm marker placement for call_id: ${markerToolCallId}`);
             const confirmResponse = await fetch('/api/submit-chart-context', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ 
-                  chartContext: null, // Not needed for marker confirmation
-                  originalQuery: predefinedQuery, // Query that triggered marker
+                  chartContext: null, 
+                  originalQuery: predefinedQuery, 
                   toolCallId: markerToolCallId,
                   toolCall: markerToolCall,
                   originalInput: markerOriginalInput,
-                  toolResultPayload: JSON.stringify({ status: 'success', message: 'Marker placed successfully.' })
+                  // Send simple success payload for marker confirmation
+                  toolResultPayload: JSON.stringify({ status: 'success', message: 'Marker placed successfully.' }),
+                  model: currentModel 
               })
             });
+            console.log(`[handleAnalyzeChart] Marker confirmation response status: ${confirmResponse.status}`);
             const confirmData = await confirmResponse.json();
+            console.log("[handleAnalyzeChart] Marker confirmation response data:", confirmData);
             if (!confirmResponse.ok || !confirmData.success) {
               throw new Error(confirmData.error || `Marker confirmation failed: ${confirmResponse.status}`);
             }
-            // Process the response *from the confirmation call*
+            
+            // Process the AI's response *after* confirmation
             if (confirmData.response) {
                 addSystemMessage(confirmData.response, 'auto', confirmData.responseId);
+            } else if (confirmData.actionRequired) {
+                 // Handle unlikely case where confirmation triggers another action?
+                 console.warn("Confirmation triggered another action:", confirmData);
+                 // Need further logic here if this case is possible/required
             } else {
-                 // Handle cases where confirmation might trigger another action (unlikely here)
-                 console.warn("Unexpected response after marker confirmation:", confirmData);
+                 console.warn("No text response after marker confirmation:", confirmData);
+                 // Maybe add a generic confirmation message?
+                 // addSystemMessage("Marker placed.", 'system', confirmData.responseId);
             }
           } catch (confirmError) {
               console.error("Error confirming marker placement:", confirmError);
               const errorMsg = confirmError instanceof Error ? confirmError.message : 'Failed to confirm marker placement';
               addSystemMessage(`Error after placing marker: ${errorMsg}`, 'system');
+              // Let finally block handle isProcessing = false
           }
         } else {
             console.error("chartRef.current.placeMarker method not found!");
             addSystemMessage("Error: Could not place marker on the chart.", 'system');
+            // Let finally block handle isProcessing = false
         }
       } else {
         console.log("[handleAnalyzeChart] Received direct text response.");
@@ -237,7 +314,7 @@ export const ChatContainer = ({ chartRef }: ChatContainerProps) => {
     } finally {
       setState((prev) => ({ ...prev, isProcessing: false }));
     }
-  }, [state.isProcessing, toast, executeChartAnalysis, chartRef]);
+  }, [state.isProcessing, state.selectedModel, toast, executeChartAnalysis, chartRef]);
 
   // UPDATED: Handler for sending user messages
   const handleSendMessage = useCallback(async (content: string) => {
@@ -246,6 +323,7 @@ export const ChatContainer = ({ chartRef }: ChatContainerProps) => {
 
     addUserMessage(content);
     const idToSend = state.lastResponseId; 
+    const currentModel = state.selectedModel;
     setState((prev) => ({ ...prev, isProcessing: true }));
 
     const inputMessageForApi = {
@@ -254,11 +332,15 @@ export const ChatContainer = ({ chartRef }: ChatContainerProps) => {
     };
 
     try {
-      console.log(`[handleSendMessage] Calling /api/chat... (previous_id: ${idToSend})`);
+      console.log(`[handleSendMessage] Calling /api/chat... (previous_id: ${idToSend}, model: ${currentModel})`);
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content, previous_response_id: idToSend })
+        body: JSON.stringify({ 
+            content, 
+            previous_response_id: idToSend, 
+            model: currentModel 
+        })
       });
       const data = await response.json();
 
@@ -274,58 +356,69 @@ export const ChatContainer = ({ chartRef }: ChatContainerProps) => {
           data.toolCallId, 
           data.toolCall,      
           [inputMessageForApi], 
+          currentModel,
           0 
         );
       } else if (data.actionRequired === 'place_marker') {
-         // *** HANDLE PLACE MARKER ACTION ***
+        // *** HANDLE PLACE MARKER ACTION ***
         console.log("[handleSendMessage] Received request to place marker:", data.markerArgs);
-        
-        // Store necessary data before potentially async operations
         const markerArgs = data.markerArgs;
         const markerToolCallId = data.toolCallId;
         const markerToolCall = data.toolCall;
         const markerResponseId = data.responseId; 
-        // Need originalInput that led to this call
         const markerOriginalInput = [inputMessageForApi];
 
         if (chartRef.current?.placeMarker) { 
+          // Place marker locally
           chartRef.current.placeMarker(markerArgs);
-          setState(prev => ({ ...prev, lastResponseId: markerResponseId })); // Update ID for context
-
-          // *** Immediately submit confirmation to backend ***
+          setState(prev => ({ ...prev, lastResponseId: markerResponseId })); 
+          
+           // *** Await the confirmation call to complete the tool loop ***
            try {
-            console.log("[handleSendMessage] Confirming marker placement to backend...");
-            const confirmResponse = await fetch('/api/submit-chart-context', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ 
-                  chartContext: null, // Not needed for marker confirmation
-                  originalQuery: content, // Query that triggered marker
-                  toolCallId: markerToolCallId,
-                  toolCall: markerToolCall,
-                  originalInput: markerOriginalInput,
-                  toolResultPayload: JSON.stringify({ status: 'success', message: 'Marker placed successfully.' })
-              })
-            });
-            const confirmData = await confirmResponse.json();
-            if (!confirmResponse.ok || !confirmData.success) {
-              throw new Error(confirmData.error || `Marker confirmation failed: ${confirmResponse.status}`);
-            }
-            // Process the response *from the confirmation call*
-            if (confirmData.response) {
-                addSystemMessage(confirmData.response, 'auto', confirmData.responseId);
-            } else {
-                 // Handle cases where confirmation might trigger another action (unlikely here)
-                 console.warn("Unexpected response after marker confirmation:", confirmData);
-            }
-          } catch (confirmError) {
-              console.error("Error confirming marker placement:", confirmError);
-              const errorMsg = confirmError instanceof Error ? confirmError.message : 'Failed to confirm marker placement';
-              addSystemMessage(`Error after placing marker: ${errorMsg}`, 'system');
-          }      
+             console.log(`[handleSendMessage] Attempting to confirm marker placement for call_id: ${markerToolCallId}`);
+             const confirmResponse = await fetch('/api/submit-chart-context', {
+               method: 'POST',
+               headers: { 'Content-Type': 'application/json' },
+               body: JSON.stringify({ 
+                   chartContext: null, 
+                   originalQuery: content, 
+                   toolCallId: markerToolCallId,
+                   toolCall: markerToolCall,
+                   originalInput: markerOriginalInput,
+                    // Send simple success payload for marker confirmation
+                   toolResultPayload: JSON.stringify({ status: 'success', message: 'Marker placed successfully.' }),
+                   model: currentModel 
+               })
+             });
+             console.log(`[handleSendMessage] Marker confirmation response status: ${confirmResponse.status}`);
+             const confirmData = await confirmResponse.json();
+             console.log("[handleSendMessage] Marker confirmation response data:", confirmData);
+             if (!confirmResponse.ok || !confirmData.success) {
+               throw new Error(confirmData.error || `Marker confirmation failed: ${confirmResponse.status}`);
+             }
+
+             // Process the AI's response *after* confirmation
+              if (confirmData.response) {
+                 addSystemMessage(confirmData.response, 'auto', confirmData.responseId);
+             } else if (confirmData.actionRequired) {
+                  // Handle unlikely case where confirmation triggers another action?
+                  console.warn("Confirmation triggered another action:", confirmData);
+                  // Need further logic here if this case is possible/required
+             } else {
+                  console.warn("No text response after marker confirmation:", confirmData);
+                  // Maybe add a generic confirmation message?
+                  // addSystemMessage("Marker placed.", 'system', confirmData.responseId);
+             }
+           } catch (confirmError) {
+               console.error("Error confirming marker placement:", confirmError);
+               const errorMsg = confirmError instanceof Error ? confirmError.message : 'Failed to confirm marker placement';
+               addSystemMessage(`Error after placing marker: ${errorMsg}`, 'system');
+               // Let finally block handle isProcessing = false
+           }      
         } else {
             console.error("chartRef.current.placeMarker method not found!");
             addSystemMessage("Error: Could not place marker on the chart.", 'system');
+            // Let finally block handle isProcessing = false
         }
       } else {
         console.log("[handleSendMessage] Received direct text response.");
@@ -340,7 +433,7 @@ export const ChatContainer = ({ chartRef }: ChatContainerProps) => {
     } finally {
       setState((prev) => ({ ...prev, isProcessing: false }));
     }
-  }, [state.isProcessing, state.lastResponseId, chartRef, toast, executeChartAnalysis]);
+  }, [state.isProcessing, state.lastResponseId, state.selectedModel, chartRef, toast, executeChartAnalysis]);
 
   return (
     <div className="flex flex-1 min-h-0 flex-col bg-background dark:bg-neutral-900 overflow-hidden rounded-xl">
@@ -360,6 +453,8 @@ export const ChatContainer = ({ chartRef }: ChatContainerProps) => {
           onSend={handleSendMessage}
           isProcessing={state.isProcessing}
           onAnalyzeChart={handleAnalyzeChart}
+          selectedModel={state.selectedModel}
+          onModelChange={handleModelChange}
         />
       </div>
     </div>

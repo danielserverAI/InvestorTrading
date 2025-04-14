@@ -71,7 +71,7 @@ const Header = ({ activeView, setActiveView, onSearchChange }: HeaderProps) => {
                          backdrop-blur-md 
                          border border-white/20 dark:border-neutral-800/50 
                          shadow-sm 
-                         focus:outline-none focus:ring-1 focus:ring-primary-500 dark:focus:ring-primary-400"
+                         focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 dark:focus-visible:ring-offset-neutral-950"
             />
           </div>
         </div>
@@ -94,7 +94,7 @@ const Header = ({ activeView, setActiveView, onSearchChange }: HeaderProps) => {
                          backdrop-blur-md 
                          border border-white/20 dark:border-neutral-800/50 
                          shadow-sm 
-                         focus:outline-none focus:ring-1 focus:ring-primary-500 dark:focus:ring-primary-400"
+                         focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 dark:focus-visible:ring-offset-neutral-950"
             />
           </div>
         </div>
