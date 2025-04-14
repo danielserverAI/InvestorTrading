@@ -174,6 +174,56 @@ export const ChatContainer = ({ chartRef }: ChatContainerProps) => {
           [inputMessageForApi], 
           0 
         );
+      } else if (data.actionRequired === 'place_marker') {
+        console.log("[handleAnalyzeChart] Received request to place marker:", data.markerArgs);
+        
+        // Store necessary data before potentially async operations
+        const markerArgs = data.markerArgs;
+        const markerToolCallId = data.toolCallId;
+        const markerToolCall = data.toolCall;
+        const markerResponseId = data.responseId; 
+        // Need originalInput that led to this call
+        const markerOriginalInput = [inputMessageForApi];
+
+        if (chartRef.current?.placeMarker) { 
+          chartRef.current.placeMarker(markerArgs);
+          setState(prev => ({ ...prev, lastResponseId: markerResponseId })); // Update ID for context
+
+          // *** Immediately submit confirmation to backend ***
+          try {
+            console.log("[handleAnalyzeChart] Confirming marker placement to backend...");
+            const confirmResponse = await fetch('/api/submit-chart-context', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ 
+                  chartContext: null, // Not needed for marker confirmation
+                  originalQuery: predefinedQuery, // Query that triggered marker
+                  toolCallId: markerToolCallId,
+                  toolCall: markerToolCall,
+                  originalInput: markerOriginalInput,
+                  toolResultPayload: JSON.stringify({ status: 'success', message: 'Marker placed successfully.' })
+              })
+            });
+            const confirmData = await confirmResponse.json();
+            if (!confirmResponse.ok || !confirmData.success) {
+              throw new Error(confirmData.error || `Marker confirmation failed: ${confirmResponse.status}`);
+            }
+            // Process the response *from the confirmation call*
+            if (confirmData.response) {
+                addSystemMessage(confirmData.response, 'auto', confirmData.responseId);
+            } else {
+                 // Handle cases where confirmation might trigger another action (unlikely here)
+                 console.warn("Unexpected response after marker confirmation:", confirmData);
+            }
+          } catch (confirmError) {
+              console.error("Error confirming marker placement:", confirmError);
+              const errorMsg = confirmError instanceof Error ? confirmError.message : 'Failed to confirm marker placement';
+              addSystemMessage(`Error after placing marker: ${errorMsg}`, 'system');
+          }
+        } else {
+            console.error("chartRef.current.placeMarker method not found!");
+            addSystemMessage("Error: Could not place marker on the chart.", 'system');
+        }
       } else {
         console.log("[handleAnalyzeChart] Received direct text response.");
         addSystemMessage(data.response, 'auto', data.responseId);
@@ -187,7 +237,7 @@ export const ChatContainer = ({ chartRef }: ChatContainerProps) => {
     } finally {
       setState((prev) => ({ ...prev, isProcessing: false }));
     }
-  }, [state.isProcessing, toast, executeChartAnalysis]);
+  }, [state.isProcessing, toast, executeChartAnalysis, chartRef]);
 
   // UPDATED: Handler for sending user messages
   const handleSendMessage = useCallback(async (content: string) => {
@@ -226,6 +276,57 @@ export const ChatContainer = ({ chartRef }: ChatContainerProps) => {
           [inputMessageForApi], 
           0 
         );
+      } else if (data.actionRequired === 'place_marker') {
+         // *** HANDLE PLACE MARKER ACTION ***
+        console.log("[handleSendMessage] Received request to place marker:", data.markerArgs);
+        
+        // Store necessary data before potentially async operations
+        const markerArgs = data.markerArgs;
+        const markerToolCallId = data.toolCallId;
+        const markerToolCall = data.toolCall;
+        const markerResponseId = data.responseId; 
+        // Need originalInput that led to this call
+        const markerOriginalInput = [inputMessageForApi];
+
+        if (chartRef.current?.placeMarker) { 
+          chartRef.current.placeMarker(markerArgs);
+          setState(prev => ({ ...prev, lastResponseId: markerResponseId })); // Update ID for context
+
+          // *** Immediately submit confirmation to backend ***
+           try {
+            console.log("[handleSendMessage] Confirming marker placement to backend...");
+            const confirmResponse = await fetch('/api/submit-chart-context', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ 
+                  chartContext: null, // Not needed for marker confirmation
+                  originalQuery: content, // Query that triggered marker
+                  toolCallId: markerToolCallId,
+                  toolCall: markerToolCall,
+                  originalInput: markerOriginalInput,
+                  toolResultPayload: JSON.stringify({ status: 'success', message: 'Marker placed successfully.' })
+              })
+            });
+            const confirmData = await confirmResponse.json();
+            if (!confirmResponse.ok || !confirmData.success) {
+              throw new Error(confirmData.error || `Marker confirmation failed: ${confirmResponse.status}`);
+            }
+            // Process the response *from the confirmation call*
+            if (confirmData.response) {
+                addSystemMessage(confirmData.response, 'auto', confirmData.responseId);
+            } else {
+                 // Handle cases where confirmation might trigger another action (unlikely here)
+                 console.warn("Unexpected response after marker confirmation:", confirmData);
+            }
+          } catch (confirmError) {
+              console.error("Error confirming marker placement:", confirmError);
+              const errorMsg = confirmError instanceof Error ? confirmError.message : 'Failed to confirm marker placement';
+              addSystemMessage(`Error after placing marker: ${errorMsg}`, 'system');
+          }      
+        } else {
+            console.error("chartRef.current.placeMarker method not found!");
+            addSystemMessage("Error: Could not place marker on the chart.", 'system');
+        }
       } else {
         console.log("[handleSendMessage] Received direct text response.");
         addSystemMessage(data.response, 'auto', data.responseId);

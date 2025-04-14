@@ -602,8 +602,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!content) {
         return res.status(400).json({ success: false, error: "Missing content in request body" });
       }
+      
+      // *** Define the System Prompt ***
+      const systemPrompt = `You are a helpful financial analyst assistant integrated into a charting application. Your primary goal is to analyze chart data and user queries to provide insightful commentary.
 
-      // Define the chart analysis function tool (structure for /v1/responses)
+Key Capabilities and Instructions:
+- Analyze Chart Context: When asked about the chart, use the 'get_current_chart_analysis' function to request the necessary data (visible price bars, markers, etc.).
+- Place Markers: Use the 'place_chart_marker' function *proactively* when your analysis identifies significant points (e.g., highest/lowest price in a period, potential buy/sell signals, key support/resistance levels discussed) that would benefit the user visually. Always provide a descriptive text label for the marker.
+- Interpret Markers: Understand that 'B' markers or green up arrows generally indicate potential Buy signals/entries, and 'S' markers or red down arrows indicate potential Sell signals/exits.
+- Temporal Logic: When discussing signals or entry/exit points based on markers or analysis, ensure your reasoning is temporally logical. An exit point must occur *after* an entry point or signal event in time. Frame advice based on current conditions unless specifically asked for historical analysis.
+- Data Focus: Base your analysis primarily on the provided chart data and markers. If data is missing or unclear, state that.
+- Conciseness: Be informative but concise.`;
+      
+      // *** Prepare Input for OpenAI ***
+      let apiInput: any[] = [];
+      // Only add system prompt if it's the start of a conversation (no previous_response_id)
+      // Or, alternatively, always add it if the API handles it correctly with previous_response_id
+      // Let's try always adding it for now, as it simplifies logic. 
+      // The Responses API *should* handle context correctly. 
+      // If performance degrades or context is lost, we might need to only send it initially.
+      apiInput.push({ 
+          role: "system", 
+          content: [{ type: "input_text", text: systemPrompt } as const]
+      });
+      // Add the current user message
+      apiInput.push({ 
+          role: "user", 
+          content: [{ type: "input_text", text: content } as const]
+      });
+      
+      // Note: The Responses API uses previous_response_id to fetch history.
+      // We don't need to manually add prior messages to the apiInput array here.
+
+      // Define the function tools
       const tools = [
         {
           type: "function" as const,
@@ -617,6 +648,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
           },
           strict: true,
         },
+        // *** ADD NEW TOOL DEFINITION HERE ***
+        {
+          type: "function" as const,
+          name: "place_chart_marker",
+          description: "Places a marker on the financial chart at a specific time to highlight an event or analysis point (e.g., potential buy/sell signal, important price level).",
+          parameters: { 
+              type: "object" as const, 
+              properties: {
+                  timestamp: {
+                      type: "number",
+                      description: "The Unix timestamp (seconds) where the marker should be placed."
+                  },
+                  position: {
+                      type: "string",
+                      enum: ["aboveBar", "belowBar", "inBar"],
+                      description: "Position of the marker relative to the price bar."
+                  },
+                  color: {
+                      type: "string",
+                      description: "Color of the marker (e.g., 'red', '#2196F3', 'rgba(255,0,0,0.5)')."
+                  },
+                  shape: {
+                      type: "string",
+                      enum: ["arrowUp", "arrowDown", "circle", "square"],
+                      description: "The shape of the marker."
+                  },
+                  text: {
+                      type: "string",
+                      description: "Optional text label to display with the marker."
+                  }
+              }, 
+              required: ["timestamp", "position", "color", "shape", "text"],
+              additionalProperties: false
+          },
+          strict: true,
+        }
       ];
 
       console.log(`Calling /v1/responses with content: "${content}"${previous_response_id ? ` and previous_id: ${previous_response_id}` : ''}`);
@@ -624,30 +691,57 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Call the /v1/responses endpoint
       const response = await openai.responses.create({
         model: "gpt-4o",
-        input: content,
+        // Send the structured input array (system + user message)
+        input: apiInput, 
         previous_response_id: previous_response_id || null,
-        tools: tools, // Pass the correctly structured tools array
+        tools: tools, 
         tool_choice: "auto",
         store: true,
       });
 
       // Process the response output
-      const output = response.output?.[0]; // Check the first output item
+      const output = response.output?.[0];
+
+      // *** Log the arguments received if it's ANY function call ***
+      if (output?.type === 'function_call') {
+          console.log(`Function Call Requested: ${output.name}`);
+          console.log("Function Call Arguments Received:", output.arguments);
+      }
 
       if (output?.type === 'function_call' && output.name === 'get_current_chart_analysis') {
-        // Function call requested
+        // --- Handle Chart Analysis Request ---
         console.log("Responses API requested chart analysis function call.");
         return res.json({
           success: true,
           actionRequired: 'get_chart_context',
-          responseId: response.id, // Pass back the current response ID for the next turn
-          followUpQuery: content, // Send original query back for context
-          toolCallId: output.call_id, // Pass the tool_call_id needed for submitting results
-          toolCall: output // *** ADD THE FULL toolCall OBJECT ***
+          responseId: response.id, 
+          followUpQuery: content, 
+          toolCallId: output.call_id, 
+          toolCall: output 
         });
+      } else if (output?.type === 'function_call' && output.name === 'place_chart_marker') {
+        // --- Handle Place Marker Request --- 
+        console.log("Responses API requested place chart marker function call.");
+        try {
+            const markerArgs = JSON.parse(output.arguments || '{}');
+            // Basic validation (can be more robust)
+            if (!markerArgs.timestamp || !markerArgs.position || !markerArgs.color || !markerArgs.shape) {
+                throw new Error("Missing required arguments for place_chart_marker");
+            }
+            return res.json({
+                success: true,
+                actionRequired: 'place_marker', // New action type
+                responseId: response.id, // Pass response ID for potential follow-up?
+                markerArgs: markerArgs, // Send parsed arguments to client
+                toolCallId: output.call_id, // *** Send toolCallId ***
+                toolCall: output // *** Send full toolCall object ***
+            });
+        } catch (parseError) {
+            console.error("Error parsing place_chart_marker arguments:", parseError);
+            throw new Error(`Invalid arguments received for place_chart_marker: ${output.arguments}`);
+        }
       } else if (output?.type === 'message' && output.role === 'assistant') {
-        // Text response generated
-        // Use the convenience property or extract from content array
+        // --- Handle Text Response ---
         const textResponse = response.output_text || 
                              output.content?.find(part => part.type === 'output_text')?.text || 
                              "Sorry, I couldn't generate a text response.";
@@ -686,55 +780,89 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } = req.body;
 
       // --- Generate Tool Result Payload ---
-      // Ensure chartContext is valid before proceeding
-      if (!chartContext || typeof chartContext !== 'object') {
-          throw new Error("Invalid or missing 'chartContext' in request body.");
-      }
+      let finalToolResultPayload: string;
       
-      // *** RESTORED LOGIC TO PROCESS CHART CONTEXT ***
-      // You might need to get visibleRange from req.body again if filtering is needed here
-      // For now, assuming chartContext contains the relevant data points needed
-      // const visibleRange = req.body.visibleRange; 
-      // const filteredData = visibleRange 
-      //   ? chartContext.chartData.filter(point => 
-      //       point.time >= visibleRange.from && point.time <= visibleRange.to)
-      //   : chartContext.chartData; // Or handle missing range appropriately
-      
-      const payloadObject = {
-          status: "success",
-          symbol: chartContext.symbol,
-          interval: chartContext.interval,
-          // visibleDataPoints: filteredData, // Use processed data if filtering
-          chartData: chartContext.chartData, // Sending all data for now
-          markers: chartContext.markers,
-          selectedPoints: Array.from(chartContext.selectedPoints || []), // Ensure selectedPoints is an array
-          userQuery: originalQuery // Reiterate the query for context
-      };
-      // *** END RESTORED LOGIC ***
-
-      const toolResultPayload = JSON.stringify(payloadObject); // Stringify the constructed object
-      const maxPayloadLength = 15000; 
-      const finalToolResultPayload = toolResultPayload.length > maxPayloadLength ? 
-          JSON.stringify({ status: "success", data_truncated: true, userQuery: originalQuery }) : 
-          toolResultPayload;
-      // Add warning logic back if needed
-      if (toolResultPayload.length > maxPayloadLength) {
-           console.warn("Tool result payload truncated due to length limit.");
+      // Check if this is a marker placement confirmation or chart context submission
+      if (toolCall?.name === 'place_chart_marker') {
+          // For marker placement, use the success payload sent from the client
+          if (!req.body.toolResultPayload || typeof req.body.toolResultPayload !== 'string') {
+             throw new Error("Missing or invalid 'toolResultPayload' for marker confirmation.");
+          }
+          finalToolResultPayload = req.body.toolResultPayload;
+          console.log("Processing marker placement confirmation.");
+      } else if (toolCall?.name === 'get_current_chart_analysis') {
+           // For chart context, generate payload as before
+          console.log("Processing chart context submission.");
+          if (!chartContext || typeof chartContext !== 'object') {
+              throw new Error("Invalid or missing 'chartContext' in request body for get_current_chart_analysis.");
+          }
+          const payloadObject = {
+              status: "success",
+              symbol: chartContext.symbol,
+              interval: chartContext.interval,
+              chartData: chartContext.chartData, 
+              markers: chartContext.markers,
+              selectedPoints: Array.from(chartContext.selectedPoints || []), 
+              userQuery: originalQuery 
+          };
+          const toolResultPayload = JSON.stringify(payloadObject); 
+          const maxPayloadLength = 15000; 
+          finalToolResultPayload = toolResultPayload.length > maxPayloadLength ? 
+              JSON.stringify({ status: "success", data_truncated: true, userQuery: originalQuery }) : 
+              toolResultPayload;
+          if (toolResultPayload.length > maxPayloadLength) {
+               console.warn("Tool result payload truncated due to length limit.");
+          }
+      } else {
+           // Handle unexpected tool call name if necessary
+           throw new Error(`Unexpected tool call name received: ${toolCall?.name}`);
       }
 
-      // --- Define Tools (ensure this matches expected tools) ---
+      // --- Define Tools (only need the one relevant to the current call?) ---
+      // It might be safer to send all tools the AI *could* have used previously
       const tools = [{
           type: "function" as const,
-          name: "analyzeChartContext",
+          name: "analyzeChartContext", // Include this even if confirming marker
           description: "Analyze the provided chart context...",
-          parameters: { 
+          parameters: { type: "object" as const, properties: {}, required: [], additionalProperties: false },
+          strict: true
+      }, {
+          type: "function" as const,
+          name: "place_chart_marker", // Include this even if confirming context
+          description: "Places a marker on the financial chart...",
+           parameters: { 
               type: "object" as const, 
-              properties: {}, 
-              required: [], 
+              properties: {
+                  timestamp: {
+                      type: "number",
+                      description: "The Unix timestamp (seconds) where the marker should be placed."
+                  },
+                  position: {
+                      type: "string",
+                      enum: ["aboveBar", "belowBar", "inBar"],
+                      description: "Position of the marker relative to the price bar."
+                  },
+                  color: {
+                      type: "string",
+                      description: "Color of the marker (e.g., 'red', '#2196F3', 'rgba(255,0,0,0.5)')."
+                  },
+                  shape: {
+                      type: "string",
+                      enum: ["arrowUp", "arrowDown", "circle", "square"],
+                      description: "The shape of the marker."
+                  },
+                  text: {
+                      type: "string",
+                      description: "Optional text label to display with the marker."
+                  }
+              }, 
+              required: ["timestamp", "position", "color", "shape", "text"],
               additionalProperties: false
           },
           strict: true
       }];
+
+      // --- Validate common data ---
 
       // Validate received data (basic example)
       if (!originalInput || !Array.isArray(originalInput) || originalInput.length === 0) {
@@ -784,22 +912,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log("Received final analysis after tool call.");
         res.json({ success: true, response: textResponse, responseId: response.id });
       
-      } else if (output?.type === 'function_call' && output.name === 'analyzeChartContext') {
-        // CASE 2: Model requested ANOTHER function call - Send back to client
+      } else if (output?.type === 'function_call' && output.name === 'get_current_chart_analysis') {
+        // CASE 2: Model requested ANOTHER chart analysis call - Send back to client
         console.log("OpenAI requested chart analysis AGAIN after receiving context.");
         // Note: We might be entering a loop if the model keeps calling the function.
         // Consider refining the tool or prompts if this happens frequently.
         res.json({
           success: true,
-          actionRequired: 'get_chart_context', // Signal client to run the flow again
-          responseId: response.id,            // Pass the NEW response ID
-          followUpQuery: originalQuery,       // Keep the original query for context
-          toolCallId: output.call_id,         // Pass the NEW tool call ID
-          toolCall: output                    // Pass the NEW tool call object
+          actionRequired: 'get_chart_context', 
+          responseId: response.id,            
+          followUpQuery: originalQuery,       
+          toolCallId: output.call_id,         
+          toolCall: output                    
         });
 
+      } else if (output?.type === 'function_call' && output.name === 'place_chart_marker') {
+        // *** CASE 3: Model requested a marker placement AFTER context submission ***
+        console.log("OpenAI requested place_chart_marker AFTER receiving context.");
+        // Handle this the same way /api/chat handles it: send action to client
+         try {
+            const markerArgs = JSON.parse(output.arguments || '{}');
+            if (!markerArgs.timestamp || !markerArgs.position || !markerArgs.color || !markerArgs.shape) {
+                throw new Error("Missing required arguments for place_chart_marker (received in submit-context response)");
+            }
+            return res.json({
+                success: true,
+                actionRequired: 'place_marker', 
+                responseId: response.id, 
+                markerArgs: markerArgs, 
+                toolCallId: output.call_id, 
+                toolCall: output 
+            });
+        } catch (parseError) {
+            console.error("Error parsing place_chart_marker arguments (received in submit-context response):", parseError);
+            throw new Error(`Invalid arguments received for place_chart_marker: ${output.arguments}`);
+        }
+
       } else {
-        // CASE 3: Unexpected output structure
+        // CASE 4: Unexpected output structure
         console.error("Unexpected output structure after submitting tool result:", response.output);
         throw new Error("Unexpected response format after tool submission.");
       }

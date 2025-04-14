@@ -43,6 +43,14 @@ export interface ChartHandle {
   setVisibleRange: (range: { from: Time, to: Time }) => void;
   // Add method to get visible range (needed for context enhancement later)
   getVisibleRange: () => { from: Time, to: Time } | null;
+  // *** ADD placeMarker method signature ***
+  placeMarker: (markerData: {
+    timestamp: number;
+    position: string;
+    color: string;
+    shape: string;
+    text?: string;
+  }) => void;
 }
 
 // Mock function to simulate fetching data for different intervals/ranges
@@ -185,6 +193,54 @@ export const TradingViewChart = forwardRef<ChartHandle, TradingViewChartProps>((
       // Add a fallback or log warning if method doesn't exist (older lib version?)
       console.warn("getVisibleRange method not available on timeScale");
       return null; 
+    },
+    placeMarker: (markerData: {
+      timestamp: number;
+      position: string;
+      color: string;
+      shape: string;
+      text?: string;
+    }) => {
+      if (!chartRef.current || !candleSeriesRef.current) {
+        console.error("Cannot place marker: Chart or main series not initialized.");
+        return;
+      }
+
+      console.log("Placing marker:", markerData);
+
+      // Find the index - Ensure comparison uses numbers
+      const dataPointIndex = chartData.findIndex(d => 
+          (typeof d.time === 'number' ? d.time : parseFloat(d.time as string)) >= markerData.timestamp
+      );
+      
+      if (dataPointIndex === -1) {
+         console.warn(`Cannot place marker: No data point found at or after timestamp ${markerData.timestamp}`);
+         return; 
+      }
+      const targetTime = chartData[dataPointIndex]?.time;
+      if (!targetTime) return;
+
+      // Validate/cast position and shape using types from lightweight-charts
+      const validPosition = markerData.position as SeriesMarkerPosition;
+      const validShape = markerData.shape as SeriesMarkerShape;
+
+      const newMarker: SeriesMarker<Time> = {
+          time: targetTime, // Use the actual data point time (Time type)
+          position: validPosition, // Use validated/cast type
+          color: markerData.color,
+          shape: validShape, // Use validated/cast type
+          text: markerData.text,
+      };
+
+      // Add marker to local state
+      setMarkers(prevMarkers => [...prevMarkers, newMarker]);
+
+      // Update the series data in the chart library
+      // Important: This assumes setMarkers triggers a re-render that updates the series
+      // If not, you might need to call candleSeriesRef.current.setMarkers directly,
+      // but managing state via React is generally preferred.
+      // Example (if direct manipulation is needed):
+      // candleSeriesRef.current.setMarkers([...markersRef.current, newMarker]); 
     }
   }), [symbol, interval, chartData, markers, selectedPoints]); // Dependencies for the exposed data
 
