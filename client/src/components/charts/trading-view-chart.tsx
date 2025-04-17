@@ -216,89 +216,155 @@ export const TradingViewChart = forwardRef<ChartHandle, TradingViewChartProps>((
     }) => {
       console.log("[TradingViewChart] placeMarker called with:", markerData);
 
-      if (!chartRef.current) { // Only need chartRef check here initially
+      if (!chartRef.current) {
         console.error("Cannot place marker: Chart not initialized.");
         return;
       }
 
-      // --- Find the index of the data point closest in time ---
       if (chartData.length === 0) {
         console.warn("Cannot place marker: Chart data is empty.");
         return;
       }
 
-      let closestIndex = 0;
-      let minDiff = Infinity;
+      // Get visible range
+      const visibleRange = chartRef.current.timeScale().getVisibleRange();
+      if (!visibleRange) {
+        console.warn("Cannot get visible range");
+        return;
+      }
 
-      chartData.forEach((d, index) => {
-          // Ensure time is a number for comparison
+      // Filter to visible data points
+      const visibleData = chartData.filter(d => {
+        const pointTime = typeof d.time === 'number' ? d.time : parseFloat(d.time as string);
+        return pointTime >= (visibleRange.from as number) && pointTime <= (visibleRange.to as number);
+      }) as (CandlestickData<Time> | BarData<Time>)[];
+
+      if (visibleData.length === 0) {
+        console.warn("No visible data points found");
+        return;
+      }
+
+      console.log("[placeMarker] Visible data range:", {
+        from: new Date((visibleRange.from as number) * 1000).toLocaleString(),
+        to: new Date((visibleRange.to as number) * 1000).toLocaleString(),
+        points: visibleData.length
+      });
+
+      // Extract the price value from the text if it exists
+      const priceMatch = markerData.text?.match(/:\s*([\d.]+)/);
+      const targetPrice = priceMatch ? parseFloat(priceMatch[1]) : null;
+
+      // Find the exact point with the target price within visible range
+      let targetPoint = null;
+      if (targetPrice !== null) {
+        // For highest point
+        if (markerData.position === 'aboveBar') {
+          let maxHigh = -Infinity;
+          visibleData.forEach(d => {
+            if ('high' in d && d.high > maxHigh) {
+              maxHigh = d.high;
+              if (Math.abs(d.high - targetPrice) < 0.01) { // Allow small difference
+                targetPoint = d;
+              }
+            }
+          });
+        }
+        // For lowest point
+        else if (markerData.position === 'belowBar') {
+          let minLow = Infinity;
+          visibleData.forEach(d => {
+            if ('low' in d && d.low < minLow) {
+              minLow = d.low;
+              if (Math.abs(d.low - targetPrice) < 0.01) { // Allow small difference
+                targetPoint = d;
+              }
+            }
+          });
+        }
+      }
+
+      // If we couldn't find by price, try to find by timestamp within visible range
+      if (!targetPoint) {
+        console.log("[placeMarker] Could not find exact price match, searching by timestamp");
+        let minDiff = Infinity;
+        visibleData.forEach(d => {
           const pointTime = typeof d.time === 'number' ? d.time : parseFloat(d.time as string);
-          if (isNaN(pointTime)) return; // Skip invalid data points
+          if (isNaN(pointTime)) return;
           
           const diff = Math.abs(pointTime - markerData.timestamp);
           if (diff < minDiff) {
-              minDiff = diff;
-              closestIndex = index;
+            minDiff = diff;
+            targetPoint = d;
           }
-      });
-
-      const dataPointIndex = closestIndex; // Use the index of the closest point
-      // --- End of finding index ---
-      
-      if (dataPointIndex < 0 || dataPointIndex >= chartData.length) { 
-         console.warn(`Cannot place marker: Could not find a valid data point near timestamp ${markerData.timestamp}`);
-         return; 
+        });
       }
-      const targetTime = chartData[dataPointIndex]?.time;
-      if (!targetTime) return; // Should not happen if index is valid, but safety check
 
-      console.log(`Placing marker near timestamp ${markerData.timestamp} at data point ${dataPointIndex} with time ${targetTime}`);
+      if (!targetPoint) {
+        console.warn("Could not find a valid data point for marker placement");
+        return;
+      }
 
-      // Validate/cast position and shape using types from lightweight-charts
+      console.log("[placeMarker] Found target point:", targetPoint);
+
       const validPosition = markerData.position as SeriesMarkerPosition;
       const validShape = markerData.shape as SeriesMarkerShape;
 
       const newMarker: SeriesMarker<Time> = {
-          time: targetTime, // *** USE targetTime FROM CLOSEST POINT ***
-          position: validPosition,
-          color: markerData.color,
-          shape: validShape,
-          text: markerData.text,
+        time: targetPoint.time,
+        position: validPosition,
+        color: markerData.color,
+        shape: validShape,
+        text: markerData.text,
       };
 
-      // Add marker to local state
-      let updatedMarkers: SeriesMarker<Time>[] = [];
-      setMarkers(prevMarkers => { 
-          // Filter out potential duplicate markers at the exact same time/position/shape/color 
-          // to prevent accidental duplicates if called rapidly
-          const existingMarkerIndex = prevMarkers.findIndex(m => 
-              m.time === newMarker.time && 
-              m.position === newMarker.position &&
-              m.shape === newMarker.shape &&
-              m.color === newMarker.color
-          );
-          const baseMarkers = existingMarkerIndex !== -1 
-              ? prevMarkers.filter((_, idx) => idx !== existingMarkerIndex)
-              : prevMarkers;
-              
-          updatedMarkers = [...baseMarkers, newMarker].sort((a, b) => (a.time as number) - (b.time as number)); // Keep sorted
-          return updatedMarkers;
-      });
-
-      // Attempt to update the chart instance directly after state update
-      const activeSeries = getActiveSeries();
-      if (activeSeries) {
-          console.log("[placeMarker] Directly setting markers on active series:", updatedMarkers); 
+      // Function to update markers with retry
+      const updateMarkersWithRetry = async (retryCount = 0, maxRetries = 3) => {
           try {
-              // Use the updatedMarkers array captured from the state setter
-              activeSeries.setMarkers(updatedMarkers);
-          } catch (error) { 
-              console.error("[placeMarker] Error directly setting markers:", error);
+              // Wait for a small delay to ensure state is settled
+              await new Promise(resolve => setTimeout(resolve, 50));
+              
+              setMarkers(prevMarkers => {
+                  const existingMarkerIndex = prevMarkers.findIndex(m => 
+                      m.time === newMarker.time && 
+                      m.position === newMarker.position &&
+                      m.shape === newMarker.shape &&
+                      m.color === newMarker.color
+                  );
+                  
+                  const baseMarkers = existingMarkerIndex !== -1 
+                      ? prevMarkers.filter((_, idx) => idx !== existingMarkerIndex)
+                      : prevMarkers;
+                      
+                  const updatedMarkers = [...baseMarkers, newMarker]
+                      .sort((a, b) => (a.time as number) - (b.time as number));
+                  
+                  // Update the chart immediately after state update
+                  const activeSeries = getActiveSeries();
+                  if (activeSeries) {
+                      console.log("[placeMarker] Setting markers on active series:", updatedMarkers);
+                      try {
+                          activeSeries.setMarkers(updatedMarkers);
+                      } catch (error) {
+                          console.error("[placeMarker] Error setting markers:", error);
+                          // If we have retries left, try again
+                          if (retryCount < maxRetries) {
+                              setTimeout(() => updateMarkersWithRetry(retryCount + 1), 100);
+                          }
+                      }
+                  }
+                  
+                  return updatedMarkers;
+              });
+          } catch (error) {
+              console.error("[placeMarker] Error in updateMarkersWithRetry:", error);
+              if (retryCount < maxRetries) {
+                  setTimeout(() => updateMarkersWithRetry(retryCount + 1), 100);
+              }
           }
-      } else {
-          // This check also covers the case where the specific series type ref (e.g., candleSeriesRef) might be null
-          console.warn("[placeMarker] Could not directly set markers: No active series found or series ref is null.");
-      }
+      };
+
+      // Start the update process
+      updateMarkersWithRetry();
     }
   }), [symbol, interval, chartData, markers, selectedPoints, getActiveSeries]); // Ensure getActiveSeries is here
 
@@ -355,6 +421,25 @@ export const TradingViewChart = forwardRef<ChartHandle, TradingViewChartProps>((
         },
         crosshair: {
             mode: CrosshairMode.Normal,
+            // Add localization for crosshair
+            vertLine: {
+                labelVisible: true,
+            },
+            horzLine: {
+                labelVisible: true,
+            },
+        },
+        localization: {
+            timeFormatter: (time: Time) => {
+                const date = new Date((time as number) * 1000); // Convert UTC timestamp to local
+                return date.toLocaleString(undefined, { 
+                    month: 'short',
+                    day: 'numeric',
+                    hour12: false,
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+            },
         },
         rightPriceScale: {
             borderColor: gridColor,
@@ -364,25 +449,30 @@ export const TradingViewChart = forwardRef<ChartHandle, TradingViewChartProps>((
             timeVisible: true,
             secondsVisible: false,
             tickMarkFormatter: (time: Time, tickMarkType: TickMarkType) => {
-              const date = new Date((time as number) * 1000);
+              const date = new Date((time as number) * 1000); // time is UTC timestamp
               switch (tickMarkType) {
                   case TickMarkType.Year:
-                      return date.getFullYear().toString();
+                      return date.getFullYear().toString(); // e.g., 2024
                   case TickMarkType.Month:
+                      // e.g., Jun
                       return date.toLocaleDateString(undefined, { month: 'short' });
                   case TickMarkType.DayOfMonth:
-                      return date.getDate().toString();
+                      // e.g., Jun 14
+                      return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
                   case TickMarkType.Time:
+                      // e.g., 14:30 (Local time, 24h)
                       return date.toLocaleTimeString(undefined, { hour12: false, hour: '2-digit', minute: '2-digit' });
                   default:
-                      return '';
+                       // Fallback just in case
+                      return new Date((time as number) * 1000).toLocaleDateString();
               }
-            }
+            },
         },
         handleScroll: true,
         handleScale: true,
     };
 
+    // Ensure chart creation happens after options
     chartRef.current = createChart(chartContainerRef.current, chartOptions);
 
     // --- BEGIN INITIAL SERIES CREATION --- 

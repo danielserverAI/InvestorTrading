@@ -1,5 +1,5 @@
 import type { Express, Request, Response } from "express";
-import { createServer, type Server } from "http";
+import { createServer, Server } from "http";  // Remove 'type' from Server import since we're using both
 import { storage } from "./storage";
 import { insertUserSchema } from "@shared/schema";
 import { z } from "zod";
@@ -393,15 +393,6 @@ interface TimeScaleVisibleRange {
   to: number;
 }
 
-interface ChartDataPoint {
-  time: number;
-  open?: number;
-  high?: number;
-  low?: number;
-  close?: number;
-  value?: number; // For line/area charts
-}
-
 interface SeriesMarkerInfo {
     time: number;
     position: string; // 'aboveBar' | 'belowBar' | 'inBar'
@@ -411,6 +402,50 @@ interface SeriesMarkerInfo {
     // id?: string | number; // Optional internal ID
     // size?: number; // Optional size
 }
+
+// Helper function for timestamp conversion - moved outside block
+const formatTimestamp = (timestamp: number): string => {
+    const date = new Date(timestamp * 1000);
+    return date.toLocaleString();
+};
+
+// Helper function to calculate rate of change based on interval
+const calculateRateOfChange = (data: ProcessedChartDataPoint[], interval: string): string => {
+    // Define lookback periods based on interval
+    const lookbackPeriods: Record<string, number> = {
+        '1D': 5,    // 5 bars for intraday
+        '1W': 4,    // 4 weeks
+        '1M': 3,    // 3 months
+        '1Y': 12    // 12 months
+    };
+
+    const periods = lookbackPeriods[interval] || 5;  // Default to 5 periods if interval not recognized
+    
+    // Check if we have enough data
+    if (data.length <= periods) {
+        // If not enough data, calculate from beginning
+        const startPrice = data[0]?.close;
+        const endPrice = data[data.length - 1]?.close;
+        
+        if (typeof startPrice === 'number' && typeof endPrice === 'number') {
+            return ((endPrice - startPrice) / startPrice * 100).toFixed(2) + '%';
+        }
+        return '0.00%';
+    }
+
+    // Calculate ROC with proper lookback
+    const currentPrice = data[data.length - 1]?.close;
+    const pastPrice = data[data.length - 1 - periods]?.close;
+    
+    if (typeof currentPrice === 'number' && typeof pastPrice === 'number') {
+        return ((currentPrice - pastPrice) / pastPrice * 100).toFixed(2) + '%';
+    }
+    
+    return '0.00%';
+};
+
+import { processChartData, calculateChartStatistics } from './services/chartAnalysis';
+import { ChartDataPoint, ProcessedChartDataPoint } from './types';
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // API Routes
@@ -594,15 +629,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // --- UPDATED Chat Endpoint (using /v1/responses) ---
   app.post("/api/chat", async (req: Request, res: Response) => {
     try {
-      // *** Extract model from request body ***
       const { content, previous_response_id, model } = req.body as { 
           content: string; 
           previous_response_id?: string | null; 
-          model?: string; // Added model field
+          model?: string;
       };
       
-      // Use provided model or default
-      const requestedModel = model || 'gpt-4o-mini'; 
+      const requestedModel = model || 'gpt-4o-mini';
 
       if (!content) {
         return res.status(400).json({ success: false, error: "Missing content in request body" });
@@ -617,7 +650,8 @@ Key Capabilities and Instructions:
 - Interpret Markers: Understand that 'B' markers or green up arrows generally indicate potential Buy signals/entries, and 'S' markers or red down arrows indicate potential Sell signals/exits.
 - Temporal Logic: When discussing signals or entry/exit points based on markers or analysis, ensure your reasoning is temporally logical. An exit point must occur *after* an entry point or signal event in time. Frame advice based on current conditions unless specifically asked for historical analysis.
 - Data Focus: Base your analysis primarily on the provided chart data and markers. If data is missing or unclear, state that.
-- Conciseness: Be informative but concise.`;
+- Conciseness: Be informative but concise.
+- Timestamp Handling: The chart data contains Unix timestamps in seconds. When reporting dates and times, ALWAYS multiply the timestamp by 1000 before creating a Date object (e.g., new Date(timestamp * 1000)). Report dates in the user's local timezone.`;
       
       // *** Prepare Input for OpenAI ***
       let apiInput: any[] = [];
@@ -695,12 +729,14 @@ Key Capabilities and Instructions:
 
       // Call the /v1/responses endpoint
       const response = await openai.responses.create({
-        model: requestedModel, // *** Use requested model ***
+        model: requestedModel,
         input: apiInput, 
         previous_response_id: previous_response_id || null,
         tools: tools, 
         tool_choice: "auto",
         store: true,
+        // Add instructions about visible range
+        instructions: "Please analyze only the visible portion of the chart data provided. The data points represent what is currently visible to the user in their chart view. When answering questions about highs, lows, or specific points, only consider the data points you receive. Do not make assumptions about data outside the visible range."
       });
 
       // Process the response output
@@ -721,7 +757,9 @@ Key Capabilities and Instructions:
           responseId: response.id, 
           followUpQuery: content, 
           toolCallId: output.call_id, 
-          toolCall: output 
+          toolCall: output,
+          // Add a note to the AI about analyzing only visible data
+          instructions: "Please analyze only the visible portion of the chart data provided. The data points sent to you represent what is currently visible to the user in their chart view. When answering questions about highs, lows, or specific points, only consider the data points you receive."
         });
       } else if (output?.type === 'function_call' && output.name === 'place_chart_marker') {
         // --- Handle Place Marker Request --- 
@@ -764,7 +802,7 @@ Key Capabilities and Instructions:
     } catch (error) {
       console.error("Chat processing error (/v1/responses):", error);
       res.status(500).json({
-        success: false,
+        success: false, 
         error: error instanceof Error ? error.message : "Unknown error processing chat message"
       });
     }
@@ -773,95 +811,102 @@ Key Capabilities and Instructions:
   // --- NEW Endpoint to submit tool results (chart context) --- 
   app.post("/api/submit-chart-context", async (req: Request, res: Response) => {
     try {
-      // *** Extract model from request body ***
       const { 
         toolCallId,       
         chartContext,     
         originalQuery,    
         originalInput,    
         toolCall,         
-        model, // Added model field
-        toolResultPayload: clientProvidedPayload // Optional payload from client (for marker confirm)
+        model,
+        toolResultPayload: clientProvidedPayload
       } = req.body;
       
-      // Use provided model or default
       const requestedModel = model || 'gpt-4o-mini';
 
-      // --- Generate Tool Result Payload ---
       let finalToolResultPayload: string;
       
       if (toolCall?.name === 'place_chart_marker') {
-          // Use payload sent by client for marker confirmation
-          if (!clientProvidedPayload || typeof clientProvidedPayload !== 'string') {
-             throw new Error("Missing or invalid 'toolResultPayload' for marker confirmation.");
-          }
-          finalToolResultPayload = clientProvidedPayload;
-          console.log("Processing marker placement confirmation.");
+        if (!clientProvidedPayload || typeof clientProvidedPayload !== 'string') {
+          throw new Error("Missing or invalid 'toolResultPayload' for marker confirmation.");
+        }
+        finalToolResultPayload = clientProvidedPayload;
+        console.log("Processing marker placement confirmation.");
       } else if (toolCall?.name === 'get_current_chart_analysis') {
-           // Generate payload from chart context
-          console.log("Processing chart context submission.");
-          if (!chartContext || typeof chartContext !== 'object') {
-              throw new Error("Invalid or missing 'chartContext' in request body for get_current_chart_analysis.");
-          }
-          const payloadObject = {
-              status: "success",
-              symbol: chartContext.symbol,
-              interval: chartContext.interval,
-              chartData: chartContext.chartData, 
-              markers: chartContext.markers,
-              selectedPoints: Array.from(chartContext.selectedPoints || []), 
-              userQuery: originalQuery 
-          };
-          const toolResultPayload = JSON.stringify(payloadObject); 
-          const maxPayloadLength = 15000; 
-          finalToolResultPayload = toolResultPayload.length > maxPayloadLength ? JSON.stringify({ status: "success", data_truncated: true, userQuery: originalQuery }) : toolResultPayload;
-          if (toolResultPayload.length > maxPayloadLength) { console.warn("Payload truncated."); }
+        console.log("Processing chart context submission.");
+        if (!chartContext || typeof chartContext !== 'object') {
+          throw new Error("Invalid or missing 'chartContext' in request body for get_current_chart_analysis.");
+        }
+
+        if (!Array.isArray(chartContext.chartData)) {
+          throw new Error("Invalid or missing chartData array in chart context.");
+        }
+
+        // Process chart data using our service
+        const processedChartData = processChartData(chartContext.chartData);
+        
+        // Calculate statistics using our service
+        const statistics = calculateChartStatistics(processedChartData, chartContext.interval);
+
+        const payloadObject = {
+          status: "success",
+          symbol: chartContext.symbol,
+          interval: chartContext.interval,
+          chartData: processedChartData,
+          markers: chartContext.markers,
+          selectedPoints: Array.from(chartContext.selectedPoints || []),
+          userQuery: originalQuery,
+          currentTimezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+          dataStats: statistics,
+          timestampNote: "IMPORTANT: All timestamps are Unix timestamps in seconds. You MUST multiply by 1000 before creating Date objects. Only analyze data points provided within the visible range. When discussing price action, consider volume, trend patterns, and overall market context."
+        };
+
+        finalToolResultPayload = JSON.stringify(payloadObject);
       } else {
-           throw new Error(`Unexpected tool call name received: ${toolCall?.name}`);
+        throw new Error(`Unsupported tool call name: ${toolCall?.name}`);
       }
 
       // --- Define Tools (only need the one relevant to the current call?) ---
       // It might be safer to send all tools the AI *could* have used previously
       const tools = [{
-          type: "function" as const,
-          name: "analyzeChartContext", // Include this even if confirming marker
-          description: "Analyze the provided chart context...",
-          parameters: { type: "object" as const, properties: {}, required: [], additionalProperties: false },
-          strict: true
+        type: "function" as const,
+        name: "analyzeChartContext", // Include this even if confirming marker
+        description: "Analyze the provided chart context...",
+        parameters: { type: "object" as const, properties: {}, required: [], additionalProperties: false },
+        strict: true
       }, {
-          type: "function" as const,
-          name: "place_chart_marker", // Include this even if confirming context
-          description: "Places a marker on the financial chart...",
-           parameters: { 
-              type: "object" as const, 
-              properties: {
-                  timestamp: {
-                      type: "number",
-                      description: "The Unix timestamp (seconds) where the marker should be placed."
-                  },
-                  position: {
-                      type: "string",
-                      enum: ["aboveBar", "belowBar", "inBar"],
-                      description: "Position of the marker relative to the price bar."
-                  },
-                  color: {
-                      type: "string",
-                      description: "Color of the marker (e.g., 'red', '#2196F3', 'rgba(255,0,0,0.5)')."
-                  },
-                  shape: {
-                      type: "string",
-                      enum: ["arrowUp", "arrowDown", "circle", "square"],
-                      description: "The shape of the marker."
-                  },
-                  text: {
-                      type: "string",
-                      description: "Optional text label to display with the marker."
-                  }
-              }, 
-              required: ["timestamp", "position", "color", "shape", "text"],
-              additionalProperties: false
-          },
-          strict: true
+        type: "function" as const,
+        name: "place_chart_marker", // Include this even if confirming context
+        description: "Places a marker on the financial chart...",
+         parameters: { 
+            type: "object" as const, 
+            properties: {
+                timestamp: {
+                    type: "number",
+                    description: "The Unix timestamp (seconds) where the marker should be placed."
+                },
+                position: {
+                    type: "string",
+                    enum: ["aboveBar", "belowBar", "inBar"],
+                    description: "Position of the marker relative to the price bar."
+                },
+                color: {
+                    type: "string",
+                    description: "Color of the marker (e.g., 'red', '#2196F3', 'rgba(255,0,0,0.5)')."
+                },
+                shape: {
+                    type: "string",
+                    enum: ["arrowUp", "arrowDown", "circle", "square"],
+                    description: "The shape of the marker."
+                },
+                text: {
+                    type: "string",
+                    description: "Optional text label to display with the marker."
+                }
+            }, 
+            required: ["timestamp", "position", "color", "shape", "text"],
+            additionalProperties: false
+        },
+        strict: true
       }];
 
       // --- Validate common data ---
@@ -970,7 +1015,7 @@ Key Capabilities and Instructions:
     }
   });
 
-  // Create HTTP server
+  // Create HTTP server using imported createServer
   const httpServer = createServer(app);
 
   return httpServer;

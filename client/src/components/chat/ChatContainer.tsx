@@ -6,6 +6,8 @@ import { InputBar } from './InputBar';
 import { Message, TabType, AgentType, ChatState } from './types';
 import type { ChartHandle } from '@/components/charts/trading-view-chart';
 import { useToast } from '@/hooks/use-toast';
+import { Time } from 'lightweight-charts';
+import { CandlestickData, BarData } from 'lightweight-charts';
 
 const initialState: ChatState = {
   messages: [],
@@ -19,6 +21,13 @@ const initialState: ChatState = {
 
 interface ChatContainerProps {
   chartRef: RefObject<ChartHandle>;
+}
+
+interface DataPoint {
+    time: Time;
+    high?: number;
+    low?: number;
+    value?: number;
 }
 
 // Helper function to simulate delay
@@ -93,7 +102,62 @@ export const ChatContainer = ({ chartRef }: ChatContainerProps) => {
 
     try {
       const chartContext = chartRef.current.getChartContext();
-            
+      const visibleRange = chartRef.current.getVisibleRange();
+      
+      if (!chartContext || !visibleRange) {
+          console.error("[executeChartAnalysis] Missing chart context or visible range");
+          return;
+      }
+
+      const { chartData } = chartContext;
+      const fromTime = visibleRange.from as number;
+      const toTime = visibleRange.to as number;
+
+      // Filter to only visible data points
+      const visibleData = chartData.filter(d => {
+          const pointTime = typeof d.time === 'number' ? d.time : parseFloat(d.time as string);
+          return pointTime >= fromTime && pointTime <= toTime;
+      }) as (CandlestickData<Time> | BarData<Time>)[];
+
+      // Validate visible range dates
+      const visibleRangeStr = {
+          from: new Date(fromTime * 1000).toLocaleString(),
+          to: new Date(toTime * 1000).toLocaleString()
+      };
+
+      console.log("[executeChartAnalysis] Analyzing visible range:", {
+          range: visibleRangeStr,
+          dataPoints: {
+              total: chartData.length,
+              visible: visibleData.length
+          }
+      });
+
+      // Calculate price extremes from visible data only
+      let highestPrice = -Infinity;
+      let lowestPrice = Infinity;
+      let highestPoint: (CandlestickData<Time> & { formattedTime: string }) | null = null;
+      let lowestPoint: (CandlestickData<Time> & { formattedTime: string }) | null = null;
+
+      visibleData.forEach(d => {
+          if ('high' in d && 'low' in d) {
+              const formattedTime = new Date((d.time as number) * 1000).toLocaleString();
+              if (d.high > highestPrice) {
+                  highestPrice = d.high;
+                  highestPoint = { ...d, formattedTime };
+              }
+              if (d.low < lowestPrice) {
+                  lowestPrice = d.low;
+                  lowestPoint = { ...d, formattedTime };
+              }
+          }
+      });
+
+      console.log("[executeChartAnalysis] Price extremes in visible range:", {
+          highest: { price: highestPrice, time: highestPoint?.formattedTime },
+          lowest: { price: lowestPrice, time: lowestPoint?.formattedTime }
+      });
+
       if (retryCount === 0) {
           addSystemMessage(`Submitting chart data for analysis of "${originalQuery}"...`, 'system');
       } else {
@@ -104,7 +168,16 @@ export const ChatContainer = ({ chartRef }: ChatContainerProps) => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
-            chartContext, 
+            chartContext: {
+                symbol: chartContext.symbol,
+                interval: chartContext.interval,
+                visibleRange: visibleRangeStr,
+                priceRange: {
+                    highest: { price: highestPrice, time: highestPoint?.formattedTime },
+                    lowest: { price: lowestPrice, time: lowestPoint?.formattedTime }
+                },
+                chartData: visibleData
+            }, 
             originalQuery, 
             toolCallId,     
             toolCall,       
